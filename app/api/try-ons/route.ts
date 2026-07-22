@@ -5,8 +5,9 @@ import {
   isValidChallengeId,
   isValidSessionId,
 } from "@/lib/server/mock-try-on-engine"
+import { insertTryOn } from "@/lib/server/try-on-repository"
 
-// Placeholder: Replace with YouCam Apparel Virtual Try-On API + Cloudflare D1
+// Placeholder: Replace the mock generation engine with YouCam Apparel later.
 export async function POST(request: NextRequest) {
   const body: unknown = await request.json().catch(() => null)
 
@@ -31,6 +32,16 @@ export async function POST(request: NextRequest) {
   if (!tryOn) {
     const response: ApiErrorResponse = { success: false, error: "Unable to create try-on" }
     return NextResponse.json(response, { status: 400 })
+  }
+
+  try {
+    await insertTryOn(tryOn)
+  } catch {
+    const response: ApiErrorResponse = {
+      success: false,
+      error: "Unable to save try-on",
+    }
+    return NextResponse.json(response, { status: 500 })
   }
 
   const response: CreateTryOnResponse = { success: true, tryOn }

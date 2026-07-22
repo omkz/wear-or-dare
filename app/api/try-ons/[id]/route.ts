@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { mockTryOns } from "@/lib/mock-data"
 import type { ApiErrorResponse, GetTryOnResponse } from "@/lib/api-contracts"
-import { reconstructMockTryOn } from "@/lib/server/mock-try-on-engine"
+import { refreshMockTryOn } from "@/lib/server/try-on-repository"
 
-// Placeholder: Replace with YouCam Apparel polling + Cloudflare D1 fetch
+// Placeholder: Replace mock status progression with YouCam Apparel polling later.
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -16,15 +16,23 @@ export async function GET(
     return NextResponse.json(response)
   }
 
-  const tryOn = reconstructMockTryOn(id)
-  if (!tryOn) {
+  try {
+    const tryOn = await refreshMockTryOn(id)
+    if (!tryOn) {
+      const response: ApiErrorResponse = {
+        success: false,
+        error: "Try-on not found",
+      }
+      return NextResponse.json(response, { status: 404 })
+    }
+
+    const response: GetTryOnResponse = { success: true, tryOn }
+    return NextResponse.json(response)
+  } catch {
     const response: ApiErrorResponse = {
       success: false,
-      error: "Try-on not found",
+      error: "Unable to load try-on",
     }
-    return NextResponse.json(response, { status: 404 })
+    return NextResponse.json(response, { status: 500 })
   }
-
-  const response: GetTryOnResponse = { success: true, tryOn }
-  return NextResponse.json(response)
 }

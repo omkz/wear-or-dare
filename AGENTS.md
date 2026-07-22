@@ -14,6 +14,8 @@ Use the `@/` alias for imports from the repository root rather than long relativ
 - `pnpm start` serves the completed production build.
 - `pnpm lint` runs ESLint across the repository.
 - `pnpm exec tsc --noEmit` performs strict TypeScript checking independently of a full production build.
+- `pnpm db:generate` generates SQL migrations from `lib/db/schema.ts`.
+- `pnpm db:migrate` applies pending migrations using `DATABASE_URL`.
 
 ## Coding Style & Naming Conventions
 
@@ -29,4 +31,4 @@ History is brief, but includes Conventional Commit-style subjects such as `feat:
 
 ## Configuration & Data Safety
 
-API routes currently use placeholder/mock data. Never commit credentials or production user uploads; use environment variables for future service keys and document required variable names without including values.
+Try-on records use PostgreSQL through `DATABASE_URL`; copy `.env.example` to `.env` for local setup. Never commit credentials or production user uploads. The image generation and result fixtures remain mocked.

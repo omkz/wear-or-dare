@@ -4,21 +4,13 @@ import type {
   UpdateTryOnDecisionRequest,
   UpdateTryOnDecisionResponse,
 } from "@/lib/api-contracts"
-import { mockTryOns } from "@/lib/mock-data"
-import { reconstructMockTryOn } from "@/lib/server/mock-try-on-engine"
+import { updateTryOnDecision } from "@/lib/server/try-on-repository"
 
-// Placeholder: Replace with Cloudflare D1 update
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const tryOn = mockTryOns.find((item) => item.id === id) ?? reconstructMockTryOn(id)
-  if (!tryOn) {
-    const response: ApiErrorResponse = { success: false, error: "Try-on not found" }
-    return NextResponse.json(response, { status: 404 })
-  }
-
   const body: unknown = await request.json().catch(() => null)
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     const response: ApiErrorResponse = { success: false, error: "Malformed request body" }
@@ -33,10 +25,24 @@ export async function POST(
   }
 
   const requestBody: UpdateTryOnDecisionRequest = { decision }
-  const response: UpdateTryOnDecisionResponse = {
-    success: true,
-    tryOnId: tryOn.id,
-    decision: requestBody.decision,
+  try {
+    const tryOn = await updateTryOnDecision(id, requestBody.decision)
+    if (!tryOn) {
+      const response: ApiErrorResponse = { success: false, error: "Try-on not found" }
+      return NextResponse.json(response, { status: 404 })
+    }
+
+    const response: UpdateTryOnDecisionResponse = {
+      success: true,
+      tryOnId: tryOn.id,
+      decision: tryOn.decision ?? requestBody.decision,
+    }
+    return NextResponse.json(response)
+  } catch {
+    const response: ApiErrorResponse = {
+      success: false,
+      error: "Unable to save decision",
+    }
+    return NextResponse.json(response, { status: 500 })
   }
-  return NextResponse.json(response)
 }
