@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 
 // Placeholder: Replace with Cloudflare R2 integration
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     // In production: upload to Cloudflare R2
     // const formData = await request.formData()

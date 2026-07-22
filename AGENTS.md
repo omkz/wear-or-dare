@@ -13,7 +13,7 @@ Use the `@/` alias for imports from the repository root rather than long relativ
 - `pnpm build` creates a production build and catches integration issues.
 - `pnpm start` serves the completed production build.
 - `pnpm lint` runs ESLint across the repository.
-- `pnpm exec tsc --noEmit` performs strict TypeScript checking. Run this explicitly because `next.config.mjs` currently allows build-time type errors.
+- `pnpm exec tsc --noEmit` performs strict TypeScript checking independently of a full production build.
 
 ## Coding Style & Naming Conventions
 

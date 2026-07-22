@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { AppShell } from "@/components/app-shell"
 import { mockBattle } from "@/lib/mock-data"
@@ -10,7 +9,6 @@ import { Share2, RefreshCw, Users } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export default function BattlePage() {
-  const router = useRouter()
   const [battle, setBattle] = useState<Battle>(mockBattle)
   const [voted, setVoted] = useState<"A" | "B" | null>(null)
   const [animating, setAnimating] = useState<"A" | "B" | null>(null)

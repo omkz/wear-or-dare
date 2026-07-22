@@ -6,7 +6,7 @@ import Image from "next/image"
 import { AppShell } from "@/components/app-shell"
 import { mockSavedLooks } from "@/lib/mock-data"
 import type { SavedLook } from "@/lib/types"
-import { Heart, Share2, Swords, Trash2, BookmarkX, Bookmark } from "lucide-react"
+import { Heart, Share2, Swords, Trash2, BookmarkX } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const FILTERS = ["All", "Wear", "Dare", "Favorites"] as const

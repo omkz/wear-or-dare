@@ -6,7 +6,7 @@ import { AppShell } from "@/components/app-shell"
 import { RouletteWheel } from "@/components/roulette-wheel"
 import type { Challenge } from "@/lib/types"
 import { mockSession, mockTryOns } from "@/lib/mock-data"
-import { Flame, ArrowRight, ChevronLeft } from "lucide-react"
+import { Flame, ArrowRight } from "lucide-react"
 import Image from "next/image"
 
 export default function PlayPage() {

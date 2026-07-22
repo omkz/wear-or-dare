@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, Suspense } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { X, RefreshCw } from "lucide-react"
 import { loadingMessages } from "@/lib/mock-data"
@@ -10,18 +10,12 @@ const FLOAT_ITEMS = ["👗", "👠", "🧥", "👒", "💍", "🕶️", "👜", 
 
 function GeneratingContent() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const challengeId = searchParams.get("challenge") ?? "ch-001"
 
   const [messageIdx, setMessageIdx] = useState(0)
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState(false)
 
   const startGeneration = useCallback(() => {
-    setError(false)
-    setProgress(0)
-    setMessageIdx(0)
-
     // Cycle messages
     const msgInterval = setInterval(() => {
       setMessageIdx((prev) => (prev + 1) % loadingMessages.length)
@@ -62,6 +56,13 @@ function GeneratingContent() {
     return cleanup
   }, [startGeneration])
 
+  const retryGeneration = () => {
+    setError(false)
+    setProgress(0)
+    setMessageIdx(0)
+    startGeneration()
+  }
+
   if (error) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background px-5">
@@ -74,7 +75,7 @@ function GeneratingContent() {
             The AI stylist needed a coffee break. Let&apos;s try that again.
           </p>
           <button
-            onClick={startGeneration}
+            onClick={retryGeneration}
             className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-base font-bold text-primary-foreground shadow-lg transition-all active:scale-95"
           >
             <RefreshCw className="h-5 w-5" aria-hidden="true" />
