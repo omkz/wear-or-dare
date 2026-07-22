@@ -1,0 +1,54 @@
+import Link from "next/link"
+import { mockChallenges } from "@/lib/mock-data"
+import { BoldnessIndicator } from "@/components/boldness-indicator"
+import { ArrowRight, Users } from "lucide-react"
+
+export function RecentChallenges() {
+  const featured = mockChallenges.slice(0, 4)
+
+  return (
+    <section className="px-5 py-6">
+      <div className="mb-5 flex items-center justify-between">
+        <h2
+          className="text-2xl font-black tracking-tight"
+          style={{ fontFamily: "var(--font-display, sans-serif)" }}
+        >
+          Trending Dares
+        </h2>
+        <Link
+          href="/challenges"
+          className="flex items-center gap-1 text-sm font-semibold text-primary"
+        >
+          See all
+          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+        </Link>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        {featured.map((challenge) => (
+          <Link
+            key={challenge.id}
+            href="/play"
+            className="group flex flex-col gap-2 rounded-2xl border border-border bg-card p-4 shadow-sm transition-all active:scale-95 hover:border-primary/40 hover:shadow-md"
+          >
+            <div className="flex items-start justify-between">
+              <span className="text-3xl" role="img" aria-label={challenge.title}>
+                {challenge.emoji}
+              </span>
+              <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                {challenge.category}
+              </span>
+            </div>
+            <h3 className="font-bold text-foreground text-sm leading-tight text-balance">
+              {challenge.title}
+            </h3>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Users className="h-3 w-3" aria-hidden="true" />
+              <span>{(challenge.participationCount / 1000).toFixed(1)}k played</span>
+            </div>
+            <BoldnessIndicator level={challenge.boldness} />
+          </Link>
+        ))}
+      </div>
+    </section>
+  )
+}
