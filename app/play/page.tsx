@@ -5,6 +5,12 @@ import { useRouter } from "next/navigation"
 import { AppShell } from "@/components/app-shell"
 import { usePhotoSession } from "@/components/providers/photo-session-provider"
 import { RouletteWheel } from "@/components/roulette-wheel"
+import { getAnonymousSessionId } from "@/lib/client/anonymous-session"
+import type {
+  ApiErrorResponse,
+  CreateTryOnRequest,
+  CreateTryOnResponse,
+} from "@/lib/api-contracts"
 import type { Challenge } from "@/lib/types"
 import { mockSession, mockTryOns } from "@/lib/mock-data"
 import { Flame, ArrowRight } from "lucide-react"
@@ -14,6 +20,8 @@ export default function PlayPage() {
   const router = useRouter()
   const { file, previewUrl, isInitialized } = usePhotoSession()
   const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null)
+  const [isCreating, setIsCreating] = useState(false)
+  const [creationError, setCreationError] = useState<string | null>(null)
 
   useEffect(() => {
     if (isInitialized && (!file || !previewUrl)) {
@@ -23,11 +31,37 @@ export default function PlayPage() {
 
   const handleResult = (challenge: Challenge) => {
     setSelectedChallenge(challenge)
+    setCreationError(null)
   }
 
-  const handleContinue = () => {
-    if (!selectedChallenge) return
-    router.push(`/generating?challenge=${selectedChallenge.id}`)
+  const handleContinue = async () => {
+    if (!selectedChallenge || isCreating) return
+
+    setIsCreating(true)
+    setCreationError(null)
+
+    try {
+      const requestBody: CreateTryOnRequest = {
+        sessionId: getAnonymousSessionId(),
+        challengeId: selectedChallenge.id,
+      }
+      const response = await fetch("/api/try-ons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+      })
+      const data: CreateTryOnResponse | ApiErrorResponse = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.success ? "Could not create your try-on." : data.error)
+      }
+
+      router.push(`/generating?id=${encodeURIComponent(data.tryOn.id)}`)
+    } catch {
+      setCreationError("We couldn’t start your try-on. Please try again.")
+    } finally {
+      setIsCreating(false)
+    }
   }
 
   const lastResult = mockTryOns[0]
@@ -83,14 +117,16 @@ export default function PlayPage() {
         <div className="px-5 mt-6">
           <button
             onClick={handleContinue}
-            disabled={!selectedChallenge}
+            disabled={!selectedChallenge || isCreating}
             className={`flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-base font-bold shadow-lg transition-all ${
-              selectedChallenge
+              selectedChallenge && !isCreating
                 ? "bg-primary text-primary-foreground active:scale-95 hover:opacity-90"
                 : "bg-muted text-muted-foreground cursor-not-allowed"
             }`}
           >
-            {selectedChallenge ? (
+            {isCreating ? (
+              "Creating your look…"
+            ) : selectedChallenge ? (
               <>
                 Try &quot;{selectedChallenge.title}&quot;
                 <ArrowRight className="h-5 w-5" aria-hidden="true" />
@@ -99,6 +135,11 @@ export default function PlayPage() {
               "Spin to select a challenge"
             )}
           </button>
+          {creationError && (
+            <p className="mt-3 text-center text-xs font-semibold text-destructive" role="alert">
+              {creationError}
+            </p>
+          )}
         </div>
 
         {/* Previous result */}

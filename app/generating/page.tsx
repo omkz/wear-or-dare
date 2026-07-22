@@ -1,83 +1,152 @@
 "use client"
 
-import { useState, useEffect, useCallback, Suspense } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect, useRef, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
 import { X, RefreshCw } from "lucide-react"
 import { usePhotoSession } from "@/components/providers/photo-session-provider"
+import type { ApiErrorResponse, GetTryOnResponse } from "@/lib/api-contracts"
 import { loadingMessages } from "@/lib/mock-data"
+import type { TryOnStatus } from "@/lib/types"
 
 const FLOAT_ITEMS = ["👗", "👠", "🧥", "👒", "💍", "🕶️", "👜", "✨"]
+const MAX_POLL_FAILURES = 3
 
 function GeneratingContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const tryOnId = searchParams.get("id")
   const { file, previewUrl, isInitialized } = usePhotoSession()
+  const stopPollingRef = useRef<() => void>(() => {})
 
   const [messageIdx, setMessageIdx] = useState(0)
   const [progress, setProgress] = useState(0)
-  const [error, setError] = useState(false)
+  const [status, setStatus] = useState<TryOnStatus>("pending")
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [pollingRun, setPollingRun] = useState(0)
 
-  const startGeneration = useCallback(() => {
-    // Cycle messages
-    const msgInterval = setInterval(() => {
-      setMessageIdx((prev) => (prev + 1) % loadingMessages.length)
-    }, 1800)
+  useEffect(() => {
+    if (!isInitialized) return
 
-    // Progress bar
-    const progressInterval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 95) {
-          clearInterval(progressInterval)
-          return 95
+    if (!file || !previewUrl) {
+      router.replace("/photo")
+    } else if (!tryOnId) {
+      router.replace("/play")
+    }
+  }, [file, isInitialized, previewUrl, router, tryOnId])
+
+  useEffect(() => {
+    if (!isInitialized || !file || !previewUrl || !tryOnId) return
+
+    let active = true
+    let pollTimer: number | undefined
+    let activeController: AbortController | null = null
+    let failureCount = 0
+
+    const stopPolling = () => {
+      active = false
+      if (pollTimer !== undefined) window.clearTimeout(pollTimer)
+      activeController?.abort()
+    }
+
+    const scheduleNextPoll = () => {
+      if (!active) return
+      pollTimer = window.setTimeout(poll, 1000)
+    }
+
+    const poll = async () => {
+      activeController = new AbortController()
+
+      try {
+        const response = await fetch(`/api/try-ons/${encodeURIComponent(tryOnId)}`, {
+          signal: activeController.signal,
+          cache: "no-store",
+        })
+        const data: GetTryOnResponse | ApiErrorResponse = await response.json()
+        if (!active) return
+
+        if (!response.ok || !data.success) {
+          setErrorMessage(data.success ? "This try-on could not be loaded." : data.error)
+          return
         }
-        return prev + Math.random() * 8
+
+        failureCount = 0
+        setStatus(data.tryOn.status)
+
+        if (data.tryOn.status === "failed") {
+          setErrorMessage("The try-on could not be completed. Please try polling again.")
+          return
+        }
+
+        if (data.tryOn.status === "completed") {
+          setProgress(100)
+          router.replace(`/result/${encodeURIComponent(data.tryOn.id)}`)
+          return
+        }
+
+        scheduleNextPoll()
+      } catch (error) {
+        if (!active || (error instanceof DOMException && error.name === "AbortError")) return
+
+        failureCount += 1
+        if (failureCount >= MAX_POLL_FAILURES) {
+          setErrorMessage("We lost touch with the stylist. Check your connection and try again.")
+          return
+        }
+
+        scheduleNextPoll()
+      }
+    }
+
+    stopPollingRef.current = stopPolling
+    void poll()
+
+    return () => {
+      stopPolling()
+      if (stopPollingRef.current === stopPolling) {
+        stopPollingRef.current = () => {}
+      }
+    }
+  }, [file, isInitialized, pollingRun, previewUrl, router, tryOnId])
+
+  useEffect(() => {
+    if (!tryOnId || !file || !previewUrl || errorMessage || status === "completed") return
+
+    const messageInterval = window.setInterval(() => {
+      setMessageIdx((previous) => (previous + 1) % loadingMessages.length)
+    }, 1800)
+    const progressInterval = window.setInterval(() => {
+      setProgress((previous) => {
+        const maximum = status === "pending" ? 35 : 94
+        const increment = status === "pending" ? 5 : 8
+        return Math.min(previous + increment, maximum)
       })
     }, 300)
 
-    // Simulate completion after 4s
-    const completionTimer = setTimeout(() => {
-      clearInterval(msgInterval)
-      clearInterval(progressInterval)
-      setProgress(100)
-
-      setTimeout(() => {
-        // Use a mock result ID — in production, use the actual try-on ID
-        router.push("/result/tryon-001")
-      }, 500)
-    }, 4000)
-
     return () => {
-      clearInterval(msgInterval)
-      clearInterval(progressInterval)
-      clearTimeout(completionTimer)
+      window.clearInterval(messageInterval)
+      window.clearInterval(progressInterval)
     }
-  }, [router])
+  }, [errorMessage, file, previewUrl, status, tryOnId])
 
-  useEffect(() => {
-    if (isInitialized && (!file || !previewUrl)) {
-      router.replace("/photo")
-    }
-  }, [file, isInitialized, previewUrl, router])
-
-  useEffect(() => {
-    if (!isInitialized || !file || !previewUrl) return
-
-    const cleanup = startGeneration()
-    return cleanup
-  }, [file, isInitialized, previewUrl, startGeneration])
-
-  const retryGeneration = () => {
-    setError(false)
-    setProgress(0)
+  const retryPolling = () => {
+    setErrorMessage(null)
+    setProgress((previous) => Math.min(previous, 90))
     setMessageIdx(0)
-    startGeneration()
+    setStatus("pending")
+    setPollingRun((previous) => previous + 1)
   }
 
-  if (!isInitialized || !file || !previewUrl) {
+  const handleCancel = () => {
+    stopPollingRef.current()
+    router.push("/play")
+  }
+
+  if (!isInitialized || !file || !previewUrl || !tryOnId) {
     return <div className="min-h-screen bg-background" />
   }
 
-  if (error) {
+  if (errorMessage) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background px-5">
         <div className="max-w-sm w-full text-center">
@@ -86,10 +155,10 @@ function GeneratingContent() {
             Oops, fashion glitch!
           </h2>
           <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
-            The AI stylist needed a coffee break. Let&apos;s try that again.
+            {errorMessage}
           </p>
           <button
-            onClick={retryGeneration}
+            onClick={retryPolling}
             className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-base font-bold text-primary-foreground shadow-lg transition-all active:scale-95"
           >
             <RefreshCw className="h-5 w-5" aria-hidden="true" />
@@ -104,7 +173,7 @@ function GeneratingContent() {
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-background px-5">
       {/* Cancel */}
       <button
-        onClick={() => router.push("/play")}
+        onClick={handleCancel}
         className="absolute top-12 right-5 flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card transition-all active:scale-95"
         aria-label="Cancel and go back"
       >
@@ -155,7 +224,9 @@ function GeneratingContent() {
           aria-live="polite"
           aria-atomic="true"
         >
-          {loadingMessages[messageIdx]}
+          {status === "pending"
+            ? loadingMessages[0]
+            : loadingMessages[Math.max(1, messageIdx)]}
         </h2>
 
         {/* Progress bar */}

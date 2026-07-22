@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
 import Image from "next/image"
 import {
@@ -13,7 +13,14 @@ import {
   Zap,
   ChevronLeft,
 } from "lucide-react"
-import { mockTryOns, mockChallenges, mockGarments } from "@/lib/mock-data"
+import type {
+  ApiErrorResponse,
+  GetTryOnResponse,
+  UpdateTryOnDecisionRequest,
+  UpdateTryOnDecisionResponse,
+} from "@/lib/api-contracts"
+import { mockChallenges, mockGarments } from "@/lib/mock-data"
+import type { TryOn } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 const styleTagsByChallenge: Record<string, string[]> = {
@@ -27,27 +34,140 @@ const styleTagsByChallenge: Record<string, string[]> = {
 
 export default function ResultPage() {
   const router = useRouter()
-  const params = useParams()
-  const id = params.id as string
+  const { id } = useParams<{ id: string }>()
+  const celebrationTimerRef = useRef<number | null>(null)
 
-  const tryOn = mockTryOns.find((t) => t.id === id) ?? mockTryOns[0]
-  const challenge = mockChallenges.find((c) => c.id === tryOn.challengeId) ?? mockChallenges[0]
-  const garment = mockGarments.find((g) => g.id === tryOn.garmentId) ?? mockGarments[0]
-
-  const [decision, setDecision] = useState<"wear" | "dare" | null>(tryOn.decision)
+  const [tryOn, setTryOn] = useState<TryOn | null>(null)
+  const [decision, setDecision] = useState<"wear" | "dare" | null>(null)
   const [saved, setSaved] = useState(false)
   const [celebrating, setCelebrating] = useState(false)
+  const [isSavingDecision, setIsSavingDecision] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [decisionError, setDecisionError] = useState<string | null>(null)
 
-  const handleWear = () => {
-    setDecision("wear")
-    setCelebrating(true)
-    setSaved(true)
-    setTimeout(() => setCelebrating(false), 1500)
+  useEffect(() => {
+    const controller = new AbortController()
+    let active = true
+
+    const loadTryOn = async () => {
+      try {
+        const response = await fetch(`/api/try-ons/${encodeURIComponent(id)}`, {
+          signal: controller.signal,
+          cache: "no-store",
+        })
+        const data: GetTryOnResponse | ApiErrorResponse = await response.json()
+        if (!active) return
+
+        if (!response.ok || !data.success) {
+          setLoadError(data.success ? "This try-on could not be loaded." : data.error)
+          return
+        }
+
+        if (data.tryOn.status !== "completed" || !data.tryOn.resultImageUrl) {
+          router.replace(`/generating?id=${encodeURIComponent(id)}`)
+          return
+        }
+
+        setTryOn(data.tryOn)
+        setDecision(data.tryOn.decision)
+        setSaved(data.tryOn.decision === "wear")
+      } catch (error) {
+        if (!active || (error instanceof DOMException && error.name === "AbortError")) return
+        setLoadError("We couldn’t load this try-on. Please try again.")
+      }
+    }
+
+    void loadTryOn()
+    return () => {
+      active = false
+      controller.abort()
+    }
+  }, [id, router])
+
+  useEffect(() => {
+    return () => {
+      if (celebrationTimerRef.current !== null) {
+        window.clearTimeout(celebrationTimerRef.current)
+      }
+    }
+  }, [])
+
+  const handleDecision = async (nextDecision: "wear" | "dare") => {
+    if (!tryOn || isSavingDecision) return
+
+    setIsSavingDecision(true)
+    setDecisionError(null)
+
+    try {
+      const requestBody: UpdateTryOnDecisionRequest = { decision: nextDecision }
+      const response = await fetch(`/api/try-ons/${encodeURIComponent(tryOn.id)}/decision`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+      })
+      const data: UpdateTryOnDecisionResponse | ApiErrorResponse = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.success ? "The decision could not be saved." : data.error)
+      }
+
+      setDecision(data.decision)
+      setTryOn((current) => current ? { ...current, decision: data.decision } : current)
+
+      if (data.decision === "dare") {
+        router.push("/play")
+        return
+      }
+
+      setCelebrating(true)
+      setSaved(true)
+      celebrationTimerRef.current = window.setTimeout(() => setCelebrating(false), 1500)
+    } catch {
+      setDecisionError("We couldn’t save that choice. Please try again.")
+    } finally {
+      setIsSavingDecision(false)
+    }
   }
 
-  const handleDare = () => {
-    setDecision("dare")
-    router.push("/play")
+  if (loadError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-5">
+        <div className="w-full max-w-sm text-center">
+          <div className="mb-5 text-6xl" aria-hidden="true">🫥</div>
+          <h1 className="mb-2 text-2xl font-black">Look not found</h1>
+          <p className="mb-6 text-sm text-muted-foreground">{loadError}</p>
+          <button
+            onClick={() => router.push("/play")}
+            className="flex h-12 w-full items-center justify-center rounded-2xl bg-primary text-sm font-bold text-primary-foreground"
+          >
+            Back to Play
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!tryOn) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-3 border-primary/30 border-t-primary" aria-label="Loading result" />
+      </div>
+    )
+  }
+
+  const challenge = mockChallenges.find((item) => item.id === tryOn.challengeId)
+  const garment = mockGarments.find((item) => item.id === tryOn.garmentId)
+  if (!challenge || !garment) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-5 text-center">
+        <div>
+          <h1 className="mb-2 text-2xl font-black">Look details unavailable</h1>
+          <button onClick={() => router.push("/play")} className="text-sm font-bold text-primary">
+            Back to Play
+          </button>
+        </div>
+      </div>
+    )
   }
 
   const tags = styleTagsByChallenge[challenge.id] ?? ["Bold", "Stylish", "Unexpected"]
@@ -125,6 +245,9 @@ export default function ResultPage() {
         <div className="px-5 -mt-6 relative z-10">
           {/* Verdict */}
           <div className="mb-4">
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Try-on {tryOn.status}
+            </p>
             <h1
               className="text-3xl font-black tracking-tight text-balance leading-none mb-1"
               style={{ fontFamily: "var(--font-display, sans-serif)" }}
@@ -167,18 +290,20 @@ export default function ResultPage() {
           {decision === null ? (
             <div className="flex gap-3 mb-4">
               <button
-                onClick={handleDare}
+                onClick={() => handleDecision("dare")}
+                disabled={isSavingDecision}
                 className="flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-accent bg-accent/10 text-base font-bold text-accent transition-all active:scale-95"
               >
                 <RotateCcw className="h-5 w-5" aria-hidden="true" />
-                Dare Again
+                {isSavingDecision ? "Saving…" : "Dare Again"}
               </button>
               <button
-                onClick={handleWear}
+                onClick={() => handleDecision("wear")}
+                disabled={isSavingDecision}
                 className="flex h-14 flex-[1.5] items-center justify-center gap-2 rounded-2xl bg-primary text-base font-bold text-primary-foreground shadow-lg transition-all active:scale-95 pulse-ring"
               >
                 <Zap className="h-5 w-5" aria-hidden="true" />
-                Wear It
+                {isSavingDecision ? "Saving…" : "Wear It"}
               </button>
             </div>
           ) : (
@@ -191,6 +316,11 @@ export default function ResultPage() {
               <Check className="h-5 w-5" aria-hidden="true" />
               {decision === "wear" ? "You chose to WEAR IT!" : "You DARED AGAIN!"}
             </div>
+          )}
+          {decisionError && (
+            <p className="mb-4 text-center text-xs font-semibold text-destructive" role="alert">
+              {decisionError}
+            </p>
           )}
 
           {/* Secondary actions */}
