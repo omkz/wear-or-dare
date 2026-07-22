@@ -3,7 +3,7 @@ import type { TryOn } from "@/lib/types"
 export interface CreateTryOnRequest {
   sessionId: string
   challengeId: string
-  sourceImageUrl: string
+  sourceUploadId: string
 }
 
 export interface UploadPhotoResponse {

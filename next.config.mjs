@@ -6,6 +6,10 @@ const nextConfig = {
         protocol: "https",
         hostname: "images.unsplash.com",
       },
+      {
+        protocol: "https",
+        hostname: "yce-us.s3-accelerate.amazonaws.com",
+      },
     ],
   },
 }

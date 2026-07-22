@@ -78,7 +78,10 @@ function GeneratingContent() {
         }
 
         if (data.tryOn.status === "failed") {
-          setErrorMessage("The try-on could not be completed. Please try polling again.")
+          setErrorMessage(
+            data.tryOn.errorMessage ??
+              "The try-on could not be completed. Please try polling again."
+          )
           return
         }
 

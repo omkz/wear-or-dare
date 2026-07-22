@@ -131,6 +131,7 @@ function parsePayload(id: string, now: number): TryOnTokenPayload | null {
 
 function buildTryOn(id: string, payload: TryOnTokenPayload, now: number): TryOn {
   const status = getStatus(payload.t, now)
+  const createdAt = new Date(payload.t).toISOString()
 
   return {
     id,
@@ -138,11 +139,20 @@ function buildTryOn(id: string, payload: TryOnTokenPayload, now: number): TryOn 
     challengeId: payload.c,
     garmentId: payload.g,
     sourceImageUrl: "",
+    sourceUploadId: null,
     resultImageUrl: status === "completed" ? resultImages[payload.r] : "",
     status,
+    provider: "mock",
+    providerTaskId: null,
+    errorMessage: null,
     decision: null,
     verdict: verdicts[payload.w],
-    createdAt: new Date(payload.t).toISOString(),
+    createdAt,
+    startedAt: createdAt,
+    completedAt:
+      status === "completed"
+        ? new Date(payload.t + PROCESSING_DURATION_MS).toISOString()
+        : null,
   }
 }
 
@@ -152,6 +162,10 @@ export function isValidSessionId(sessionId: string) {
 
 export function isValidChallengeId(challengeId: string) {
   return mockChallenges.some((challenge) => challenge.id === challengeId)
+}
+
+export function getGarmentIdForChallenge(challengeId: string) {
+  return garmentByChallenge[challengeId] ?? null
 }
 
 export function createMockTryOn(sessionId: string, challengeId: string, now = Date.now()) {

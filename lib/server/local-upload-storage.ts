@@ -7,6 +7,8 @@ export const MAX_UPLOAD_SIZE = 10 * 1024 * 1024
 const UPLOAD_DIRECTORY = path.resolve(process.cwd(), "storage", "uploads")
 const SAFE_UPLOAD_FILENAME =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(?:jpg|png|webp)$/
+const SAFE_UPLOAD_ID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
 
 const FILE_EXTENSIONS = {
   "image/jpeg": "jpg",
@@ -15,6 +17,14 @@ const FILE_EXTENSIONS = {
 } as const
 
 export type AcceptedImageMimeType = keyof typeof FILE_EXTENSIONS
+
+export interface StoredUpload {
+  uploadId: string
+  filename: string
+  contentType: AcceptedImageMimeType
+  imageUrl: string
+  bytes: Uint8Array
+}
 
 export function isAcceptedImageMimeType(value: string): value is AcceptedImageMimeType {
   return value in FILE_EXTENSIONS
@@ -30,6 +40,10 @@ export function getUploadDirectory() {
 
 export function isSafeUploadFilename(filename: string) {
   return SAFE_UPLOAD_FILENAME.test(filename) && path.basename(filename) === filename
+}
+
+export function isSafeUploadId(uploadId: string) {
+  return SAFE_UPLOAD_ID.test(uploadId)
 }
 
 export function resolveUploadPath(filename: string) {
@@ -96,6 +110,29 @@ export async function readUpload(filename: string) {
   } finally {
     await file.close()
   }
+}
+
+export async function readUploadById(uploadId: string) {
+  if (!isSafeUploadId(uploadId)) return null
+
+  const matches: StoredUpload[] = []
+  for (const extension of ["jpg", "png", "webp"] as const) {
+    const filename = `${uploadId}.${extension}`
+    const bytes = await readUpload(filename)
+    const contentType = getUploadContentType(filename)
+
+    if (bytes && contentType && hasValidImageSignature(bytes, contentType)) {
+      matches.push({
+        uploadId,
+        filename,
+        contentType,
+        imageUrl: getUploadImageUrl(filename),
+        bytes,
+      })
+    }
+  }
+
+  return matches.length === 1 ? matches[0] : null
 }
 
 export function hasValidImageSignature(

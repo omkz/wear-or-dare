@@ -1,4 +1,5 @@
 export type TryOnStatus = "pending" | "processing" | "completed" | "failed"
+export type TryOnProvider = "mock" | "youcam"
 
 export interface UserSession {
   id: string
@@ -35,11 +36,17 @@ export interface TryOn {
   challengeId: string
   garmentId: string
   sourceImageUrl: string
+  sourceUploadId: string | null
   resultImageUrl: string
   status: TryOnStatus
+  provider: TryOnProvider
+  providerTaskId: string | null
+  errorMessage: string | null
   decision: "wear" | "dare" | null
   verdict: string
   createdAt: string
+  startedAt: string | null
+  completedAt: string | null
 }
 
 export interface SavedLook {

@@ -1,58 +1,96 @@
 import { NextRequest, NextResponse } from "next/server"
 import type { ApiErrorResponse, CreateTryOnRequest, CreateTryOnResponse } from "@/lib/api-contracts"
+import { getServerGarment } from "@/lib/server/garment-catalog"
+import { readUploadById } from "@/lib/server/local-upload-storage"
 import {
   createMockTryOn,
   isValidChallengeId,
   isValidSessionId,
 } from "@/lib/server/mock-try-on-engine"
-import { uploadImageExists } from "@/lib/server/local-upload-storage"
+import { createYouCamProviderTask } from "@/lib/server/try-on-service"
+import {
+  getTryOnProvider,
+  TryOnProviderConfigurationError,
+} from "@/lib/server/try-on-provider"
 import { insertTryOn } from "@/lib/server/try-on-repository"
+import { YouCamApiError } from "@/lib/server/youcam-client"
 
-// Placeholder: Replace the mock generation engine with YouCam Apparel later.
+function errorResponse(error: string, status: number) {
+  const response: ApiErrorResponse = { success: false, error }
+  return NextResponse.json(response, { status })
+}
+
 export async function POST(request: NextRequest) {
   const body: unknown = await request.json().catch(() => null)
 
   if (!body || typeof body !== "object" || Array.isArray(body)) {
-    const response: ApiErrorResponse = { success: false, error: "Malformed request body" }
-    return NextResponse.json(response, { status: 400 })
+    return errorResponse("Malformed request body", 400)
   }
 
-  const { sessionId, challengeId, sourceImageUrl } = body as Record<string, unknown>
+  const { sessionId, challengeId, sourceUploadId } = body as Record<string, unknown>
   if (typeof sessionId !== "string" || !isValidSessionId(sessionId)) {
-    const response: ApiErrorResponse = { success: false, error: "Invalid session ID" }
-    return NextResponse.json(response, { status: 400 })
+    return errorResponse("Invalid session ID", 400)
   }
-
   if (typeof challengeId !== "string" || !isValidChallengeId(challengeId)) {
-    const response: ApiErrorResponse = { success: false, error: "Invalid challenge ID" }
-    return NextResponse.json(response, { status: 400 })
+    return errorResponse("Invalid challenge ID", 400)
+  }
+  if (typeof sourceUploadId !== "string") {
+    return errorResponse("Invalid source upload ID", 400)
   }
 
-  if (
-    typeof sourceImageUrl !== "string" ||
-    !(await uploadImageExists(sourceImageUrl))
-  ) {
-    const response: ApiErrorResponse = { success: false, error: "Invalid source image URL" }
-    return NextResponse.json(response, { status: 400 })
+  const sourceUpload = await readUploadById(sourceUploadId)
+  if (!sourceUpload) return errorResponse("Uploaded source photo not found", 400)
+
+  const requestBody: CreateTryOnRequest = { sessionId, challengeId, sourceUploadId }
+  const baseTryOn = createMockTryOn(requestBody.sessionId, requestBody.challengeId)
+  if (!baseTryOn) return errorResponse("Unable to create try-on", 400)
+
+  const garment = getServerGarment(baseTryOn.garmentId)
+  if (!garment) return errorResponse("Selected garment is unavailable", 400)
+
+  let provider
+  try {
+    provider = getTryOnProvider()
+  } catch (error) {
+    if (error instanceof TryOnProviderConfigurationError) {
+      return errorResponse("Try-on provider is not configured", 500)
+    }
+    return errorResponse("Unable to configure try-on provider", 500)
   }
 
-  const requestBody: CreateTryOnRequest = { sessionId, challengeId, sourceImageUrl }
-  const mockTryOn = createMockTryOn(requestBody.sessionId, requestBody.challengeId)
-  if (!mockTryOn) {
-    const response: ApiErrorResponse = { success: false, error: "Unable to create try-on" }
-    return NextResponse.json(response, { status: 400 })
+  let providerTaskId: string | null = null
+  if (provider === "youcam") {
+    if (sourceUpload.contentType === "image/webp") {
+      return errorResponse("YouCam requires a JPEG or PNG source photo", 400)
+    }
+
+    try {
+      providerTaskId = await createYouCamProviderTask(sourceUpload, garment)
+    } catch (error) {
+      if (error instanceof YouCamApiError && error.message === "YOUCAM_API_KEY is required") {
+        return errorResponse("Try-on provider is not configured", 503)
+      }
+      return errorResponse("The virtual try-on provider could not start this request", 502)
+    }
   }
 
-  const tryOn = { ...mockTryOn, sourceImageUrl: requestBody.sourceImageUrl }
+  const tryOn = {
+    ...baseTryOn,
+    sourceImageUrl: sourceUpload.imageUrl,
+    sourceUploadId: sourceUpload.uploadId,
+    status: provider === "youcam" ? "processing" as const : baseTryOn.status,
+    provider,
+    providerTaskId,
+    resultImageUrl: "",
+    errorMessage: null,
+    startedAt: new Date().toISOString(),
+    completedAt: null,
+  }
 
   try {
     await insertTryOn(tryOn)
   } catch {
-    const response: ApiErrorResponse = {
-      success: false,
-      error: "Unable to save try-on",
-    }
-    return NextResponse.json(response, { status: 500 })
+    return errorResponse("Unable to save try-on", 500)
   }
 
   const response: CreateTryOnResponse = { success: true, tryOn }

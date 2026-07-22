@@ -11,11 +11,17 @@ function toTryOn(row: TryOnRow): TryOn {
     challengeId: row.challengeId,
     garmentId: row.garmentId,
     sourceImageUrl: row.sourceImageUrl,
+    sourceUploadId: row.sourceUploadId,
     resultImageUrl: row.resultImageUrl,
     status: row.status,
+    provider: row.provider,
+    providerTaskId: row.providerTaskId,
+    errorMessage: row.errorMessage,
     decision: row.decision,
     verdict: row.verdict,
     createdAt: row.createdAt.toISOString(),
+    startedAt: row.startedAt?.toISOString() ?? null,
+    completedAt: row.completedAt?.toISOString() ?? null,
   }
 }
 
@@ -38,10 +44,16 @@ export async function insertTryOn(tryOn: TryOn) {
       challengeId: tryOn.challengeId,
       garmentId: tryOn.garmentId,
       sourceImageUrl: tryOn.sourceImageUrl,
+      sourceUploadId: tryOn.sourceUploadId,
       status: tryOn.status,
+      provider: tryOn.provider,
+      providerTaskId: tryOn.providerTaskId,
       resultImageUrl: tryOn.resultImageUrl,
+      errorMessage: tryOn.errorMessage,
       verdict: tryOn.verdict,
       decision: tryOn.decision,
+      startedAt: tryOn.startedAt ? new Date(tryOn.startedAt) : null,
+      completedAt: tryOn.completedAt ? new Date(tryOn.completedAt) : null,
       createdAt: new Date(tryOn.createdAt),
       updatedAt: now,
     })
@@ -74,6 +86,37 @@ export async function refreshMockTryOn(id: string) {
     .set({
       status: generated.status,
       resultImageUrl: generated.resultImageUrl,
+      completedAt: generated.completedAt ? new Date(generated.completedAt) : null,
+      updatedAt: new Date(),
+    })
+    .where(eq(tryOns.id, id))
+    .returning()
+
+  return updated ? toTryOn(updated) : null
+}
+
+export async function updateYouCamTryOnState(
+  id: string,
+  update: {
+    status: TryOn["status"]
+    resultImageUrl?: string
+    errorMessage?: string | null
+    completedAt?: Date | null
+  }
+) {
+  const [updated] = await getDatabase()
+    .update(tryOns)
+    .set({
+      status: update.status,
+      ...(update.resultImageUrl !== undefined
+        ? { resultImageUrl: update.resultImageUrl }
+        : {}),
+      ...(update.errorMessage !== undefined
+        ? { errorMessage: update.errorMessage }
+        : {}),
+      ...(update.completedAt !== undefined
+        ? { completedAt: update.completedAt }
+        : {}),
       updatedAt: new Date(),
     })
     .where(eq(tryOns.id, id))

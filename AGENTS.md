@@ -31,4 +31,4 @@ History is brief, but includes Conventional Commit-style subjects such as `feat:
 
 ## Configuration & Data Safety
 
-Try-on records use PostgreSQL through `DATABASE_URL`; copy `.env.example` to `.env` for local setup. Never commit credentials or production user uploads. The image generation and result fixtures remain mocked.
+Try-on records use PostgreSQL through `DATABASE_URL`; copy `.env.example` to `.env` for local setup. `TRY_ON_PROVIDER` defaults to `mock`; use `youcam` only with a server-side `YOUCAM_API_KEY`. Never commit credentials or production user uploads.

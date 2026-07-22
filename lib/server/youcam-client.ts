@@ -15,7 +15,15 @@ export const YOUCAM_GARMENT_CATEGORIES = [
 
 export type YouCamGarmentCategory = (typeof YOUCAM_GARMENT_CATEGORIES)[number]
 export type YouCamImageContentType = "image/jpg" | "image/png"
-export type YouCamTaskStatus = "running" | "success" | "error"
+export type YouCamTaskStatus =
+  | "queued"
+  | "pending"
+  | "running"
+  | "processing"
+  | "success"
+  | "failure"
+  | "failed"
+  | "error"
 
 export interface YouCamClientOptions {
   apiKey?: string
@@ -102,6 +110,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isPositiveInteger(value: number) {
   return Number.isInteger(value) && value > 0
+}
+
+function isFailedTaskStatus(status: YouCamTaskStatus) {
+  return status === "failure" || status === "failed" || status === "error"
 }
 
 function requireNonEmptyString(value: unknown, label: string) {
@@ -196,6 +208,10 @@ function resolveClientOptions(options: YouCamClientOptions = {}): ResolvedClient
     requestTimeoutMs,
     signal: options.signal,
   }
+}
+
+export function validateYouCamConfiguration(options: YouCamClientOptions = {}) {
+  resolveClientOptions(options)
 }
 
 async function fetchWithTimeout(
@@ -441,7 +457,16 @@ export async function getClothesTaskStatus(
   }
 
   const status = payload.data.task_status
-  if (status !== "running" && status !== "success" && status !== "error") {
+  if (
+    status !== "queued" &&
+    status !== "pending" &&
+    status !== "running" &&
+    status !== "processing" &&
+    status !== "success" &&
+    status !== "failure" &&
+    status !== "failed" &&
+    status !== "error"
+  ) {
     throw new YouCamApiError("Malformed YouCam response: invalid task status")
   }
 
@@ -460,7 +485,7 @@ export async function getClothesTaskStatus(
     return result
   }
 
-  const error = status === "error" ? getApiErrorDetails(payload.data) : null
+  const error = isFailedTaskStatus(status) ? getApiErrorDetails(payload.data) : null
   const result: YouCamTaskResult = {
     taskId,
     status,
@@ -520,7 +545,7 @@ export async function pollClothesTask(
     pollingOptions.onStatus?.(result)
 
     if (result.status === "success") return result
-    if (result.status === "error") {
+    if (isFailedTaskStatus(result.status)) {
       throw new YouCamApiError(
         `YouCam clothes task failed: ${result.errorMessage ?? "Unknown task error"}`,
         { errorCode: result.errorCode ?? undefined }

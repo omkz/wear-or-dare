@@ -15,6 +15,13 @@
       "when": 1784730656136,
       "tag": "0001_unique_marrow",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784734648974,
+      "tag": "0002_skinny_bucky",
+      "breakpoints": true
     }
   ]
 }

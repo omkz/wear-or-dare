@@ -18,16 +18,16 @@ import Image from "next/image"
 
 export default function PlayPage() {
   const router = useRouter()
-  const { file, previewUrl, imageUrl, isInitialized } = usePhotoSession()
+  const { file, previewUrl, uploadId, imageUrl, isInitialized } = usePhotoSession()
   const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [creationError, setCreationError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (isInitialized && (!file || !previewUrl || !imageUrl)) {
+    if (isInitialized && (!file || !previewUrl || !uploadId || !imageUrl)) {
       router.replace("/photo")
     }
-  }, [file, imageUrl, isInitialized, previewUrl, router])
+  }, [file, imageUrl, isInitialized, previewUrl, router, uploadId])
 
   const handleResult = (challenge: Challenge) => {
     setSelectedChallenge(challenge)
@@ -35,7 +35,7 @@ export default function PlayPage() {
   }
 
   const handleContinue = async () => {
-    if (!selectedChallenge || !imageUrl || isCreating) return
+    if (!selectedChallenge || !uploadId || isCreating) return
 
     setIsCreating(true)
     setCreationError(null)
@@ -44,7 +44,7 @@ export default function PlayPage() {
       const requestBody: CreateTryOnRequest = {
         sessionId: getAnonymousSessionId(),
         challengeId: selectedChallenge.id,
-        sourceImageUrl: imageUrl,
+        sourceUploadId: uploadId,
       }
       const response = await fetch("/api/try-ons", {
         method: "POST",
@@ -67,7 +67,7 @@ export default function PlayPage() {
 
   const lastResult = mockTryOns[0]
 
-  if (!isInitialized || !file || !previewUrl || !imageUrl) {
+  if (!isInitialized || !file || !previewUrl || !uploadId || !imageUrl) {
     return <div className="min-h-screen bg-background" />
   }
 
