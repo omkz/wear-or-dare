@@ -28,6 +28,7 @@ export const tryOns = pgTable(
       .references(() => sessions.id, { onDelete: "cascade" }),
     challengeId: varchar("challenge_id", { length: 32 }).notNull(),
     garmentId: varchar("garment_id", { length: 32 }).notNull(),
+    sourceImageUrl: text("source_image_url").default("").notNull(),
     status: tryOnStatusEnum("status").default("pending").notNull(),
     resultImageUrl: text("result_image_url").default("").notNull(),
     verdict: text("verdict").notNull(),

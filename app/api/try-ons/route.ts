@@ -5,6 +5,7 @@ import {
   isValidChallengeId,
   isValidSessionId,
 } from "@/lib/server/mock-try-on-engine"
+import { uploadImageExists } from "@/lib/server/local-upload-storage"
 import { insertTryOn } from "@/lib/server/try-on-repository"
 
 // Placeholder: Replace the mock generation engine with YouCam Apparel later.
@@ -16,7 +17,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(response, { status: 400 })
   }
 
-  const { sessionId, challengeId } = body as Record<string, unknown>
+  const { sessionId, challengeId, sourceImageUrl } = body as Record<string, unknown>
   if (typeof sessionId !== "string" || !isValidSessionId(sessionId)) {
     const response: ApiErrorResponse = { success: false, error: "Invalid session ID" }
     return NextResponse.json(response, { status: 400 })
@@ -27,12 +28,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(response, { status: 400 })
   }
 
-  const requestBody: CreateTryOnRequest = { sessionId, challengeId }
-  const tryOn = createMockTryOn(requestBody.sessionId, requestBody.challengeId)
-  if (!tryOn) {
+  if (
+    typeof sourceImageUrl !== "string" ||
+    !(await uploadImageExists(sourceImageUrl))
+  ) {
+    const response: ApiErrorResponse = { success: false, error: "Invalid source image URL" }
+    return NextResponse.json(response, { status: 400 })
+  }
+
+  const requestBody: CreateTryOnRequest = { sessionId, challengeId, sourceImageUrl }
+  const mockTryOn = createMockTryOn(requestBody.sessionId, requestBody.challengeId)
+  if (!mockTryOn) {
     const response: ApiErrorResponse = { success: false, error: "Unable to create try-on" }
     return NextResponse.json(response, { status: 400 })
   }
+
+  const tryOn = { ...mockTryOn, sourceImageUrl: requestBody.sourceImageUrl }
 
   try {
     await insertTryOn(tryOn)

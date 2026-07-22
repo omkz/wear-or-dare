@@ -18,11 +18,21 @@ export interface PhotoSession {
   fileName: string | null
   mimeType: string | null
   fileSize: number | null
+  uploadId: string | null
+  imageUrl: string | null
+  storagePath: string | null
+}
+
+export interface PhotoUpload {
+  uploadId: string
+  imageUrl: string
+  storagePath: string
 }
 
 interface PhotoSessionContextValue extends PhotoSession {
   isInitialized: boolean
   setPhoto: (file: File) => void
+  setUploadedPhoto: (upload: PhotoUpload) => void
   clearPhoto: () => void
 }
 
@@ -32,6 +42,9 @@ const EMPTY_PHOTO_SESSION: PhotoSession = {
   fileName: null,
   mimeType: null,
   fileSize: null,
+  uploadId: null,
+  imageUrl: null,
+  storagePath: null,
 }
 
 const PhotoSessionContext = createContext<PhotoSessionContextValue | null>(null)
@@ -57,11 +70,18 @@ export function PhotoSessionProvider({ children }: { children: ReactNode }) {
       fileName: file.name,
       mimeType: file.type,
       fileSize: file.size,
+      uploadId: null,
+      imageUrl: null,
+      storagePath: null,
     })
 
     if (previousPreviewUrl) {
       URL.revokeObjectURL(previousPreviewUrl)
     }
+  }, [])
+
+  const setUploadedPhoto = useCallback((upload: PhotoUpload) => {
+    setPhotoState((current) => ({ ...current, ...upload }))
   }, [])
 
   const clearPhoto = useCallback(() => {
@@ -86,8 +106,8 @@ export function PhotoSessionProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo<PhotoSessionContextValue>(
-    () => ({ ...photo, isInitialized, setPhoto, clearPhoto }),
-    [clearPhoto, isInitialized, photo, setPhoto]
+    () => ({ ...photo, isInitialized, setPhoto, setUploadedPhoto, clearPhoto }),
+    [clearPhoto, isInitialized, photo, setPhoto, setUploadedPhoto]
   )
 
   return <PhotoSessionContext.Provider value={value}>{children}</PhotoSessionContext.Provider>

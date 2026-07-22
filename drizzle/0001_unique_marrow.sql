@@ -1,0 +1,1 @@
+ALTER TABLE "try_ons" ADD COLUMN "source_image_url" text DEFAULT '' NOT NULL;

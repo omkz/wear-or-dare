@@ -15,6 +15,10 @@ import {
   User,
 } from "lucide-react"
 import { usePhotoSession } from "@/components/providers/photo-session-provider"
+import type {
+  ApiErrorResponse,
+  UploadPhotoResponse,
+} from "@/lib/api-contracts"
 
 const ACCEPTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"])
 const ACCEPTED_IMAGE_TYPES_ATTRIBUTE = "image/jpeg,image/png,image/webp"
@@ -31,9 +35,11 @@ export default function PhotoPage() {
   const router = useRouter()
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
-  const { file, previewUrl, setPhoto, clearPhoto } = usePhotoSession()
+  const { file, previewUrl, setPhoto, setUploadedPhoto, clearPhoto } = usePhotoSession()
   const [isDragging, setIsDragging] = useState(false)
   const [validationError, setValidationError] = useState<string | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
 
   const handleFile = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) {
@@ -52,6 +58,7 @@ export default function PhotoPage() {
     }
 
     setValidationError(null)
+    setUploadError(null)
     setPhoto(file)
   }, [setPhoto])
 
@@ -68,13 +75,42 @@ export default function PhotoPage() {
     if (file) handleFile(file)
   }
 
-  const handleContinue = () => {
-    if (!file || !previewUrl) return
-    router.push("/play")
+  const handleContinue = async () => {
+    if (!file || !previewUrl || isUploading) return
+
+    setIsUploading(true)
+    setUploadError(null)
+
+    try {
+      const formData = new FormData()
+      formData.append("file", file, file.name)
+
+      const response = await fetch("/api/uploads", {
+        method: "POST",
+        body: formData,
+      })
+      const data: UploadPhotoResponse | ApiErrorResponse = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.success ? "Upload failed" : data.error)
+      }
+
+      setUploadedPhoto({
+        uploadId: data.uploadId,
+        imageUrl: data.imageUrl,
+        storagePath: data.storagePath,
+      })
+      router.push("/play")
+    } catch {
+      setUploadError("We couldn’t upload your photo. Please try again.")
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   const handleRetake = () => {
     setValidationError(null)
+    setUploadError(null)
     clearPhoto()
     cameraInputRef.current?.click()
   }
@@ -216,26 +252,33 @@ export default function PhotoPage() {
             <div className="mt-4 flex gap-3">
               <button
                 onClick={handleRetake}
-                className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-border bg-card text-sm font-semibold text-foreground transition-all active:scale-95"
+                disabled={isUploading}
+                className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-border bg-card text-sm font-semibold text-foreground transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <RotateCcw className="h-4 w-4" aria-hidden="true" />
                 Retake
               </button>
               <button
                 onClick={handleContinue}
-                disabled={!file || !previewUrl}
-                className="flex h-12 flex-[2] items-center justify-center gap-2 rounded-2xl bg-primary text-sm font-bold text-primary-foreground shadow-lg transition-all active:scale-95"
+                disabled={!file || !previewUrl || isUploading}
+                className="flex h-12 flex-[2] items-center justify-center gap-2 rounded-2xl bg-primary text-sm font-bold text-primary-foreground shadow-lg transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Continue
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                {isUploading ? "Uploading…" : "Continue"}
+                {!isUploading && <ArrowRight className="h-4 w-4" aria-hidden="true" />}
               </button>
             </div>
+
+            {uploadError && (
+              <p className="mt-3 text-center text-xs font-semibold text-destructive" role="alert">
+                {uploadError}
+              </p>
+            )}
 
             {/* Privacy note */}
             <div className="mt-4 flex items-start gap-2 rounded-xl bg-card border border-border p-3">
               <Shield className="h-4 w-4 text-primary mt-0.5 shrink-0" aria-hidden="true" />
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Your photo is only used to create your virtual look. We never store or share it.
+                Your photo is stored locally for this try-on and is never shared.
               </p>
             </div>
           </div>

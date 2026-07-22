@@ -1,22 +1,64 @@
-import { NextResponse } from "next/server"
+import { randomUUID } from "node:crypto"
+import { mkdir, writeFile } from "node:fs/promises"
+import { NextRequest, NextResponse } from "next/server"
+import type { ApiErrorResponse, UploadPhotoResponse } from "@/lib/api-contracts"
+import {
+  getUploadDirectory,
+  getUploadExtension,
+  getUploadImageUrl,
+  getUploadStoragePath,
+  hasValidImageSignature,
+  isAcceptedImageMimeType,
+  MAX_UPLOAD_SIZE,
+  resolveUploadPath,
+} from "@/lib/server/local-upload-storage"
 
-// Placeholder: Replace with Cloudflare R2 integration
-export async function POST() {
-  try {
-    // In production: upload to Cloudflare R2
-    // const formData = await request.formData()
-    // const file = formData.get("file") as File
-    // const uploadUrl = await uploadToR2(file)
+export const runtime = "nodejs"
 
-    const mockUploadUrl =
-      "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=400&h=600&fit=crop"
+function errorResponse(error: string, status: number) {
+  const response: ApiErrorResponse = { success: false, error }
+  return NextResponse.json(response, { status })
+}
 
-    return NextResponse.json({
-      success: true,
-      imageUrl: mockUploadUrl,
-      uploadId: `upload-${Date.now()}`,
-    })
-  } catch {
-    return NextResponse.json({ success: false, error: "Upload failed" }, { status: 500 })
+export async function POST(request: NextRequest) {
+  const formData = await request.formData().catch(() => null)
+  if (!formData) return errorResponse("Malformed upload request", 400)
+
+  const file = formData.get("file")
+  if (!(file instanceof File)) return errorResponse("An image file is required", 400)
+
+  if (!isAcceptedImageMimeType(file.type)) {
+    return errorResponse("Only JPEG, PNG, and WebP images are supported", 400)
   }
+
+  if (file.size === 0) return errorResponse("The image file is empty", 400)
+  if (file.size > MAX_UPLOAD_SIZE) {
+    return errorResponse("Image must be 10 MB or smaller", 413)
+  }
+
+  const bytes = new Uint8Array(await file.arrayBuffer())
+  if (!hasValidImageSignature(bytes, file.type)) {
+    return errorResponse("The file content does not match its image type", 400)
+  }
+
+  const uploadId = randomUUID()
+  const filename = `${uploadId}.${getUploadExtension(file.type)}`
+  const absolutePath = resolveUploadPath(filename)
+  if (!absolutePath) return errorResponse("Unable to create a safe upload path", 500)
+
+  try {
+    await mkdir(getUploadDirectory(), { recursive: true })
+    await writeFile(absolutePath, bytes, { flag: "wx" })
+  } catch {
+    return errorResponse("Upload failed. Please try again", 500)
+  }
+
+  const response: UploadPhotoResponse = {
+    success: true,
+    uploadId,
+    imageUrl: getUploadImageUrl(filename),
+    storagePath: getUploadStoragePath(filename),
+  }
+
+  return NextResponse.json(response, { status: 201 })
 }

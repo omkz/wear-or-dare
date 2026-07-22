@@ -16,7 +16,7 @@ function GeneratingContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const tryOnId = searchParams.get("id")
-  const { file, previewUrl, isInitialized } = usePhotoSession()
+  const { file, imageUrl, isInitialized } = usePhotoSession()
   const stopPollingRef = useRef<() => void>(() => {})
 
   const [messageIdx, setMessageIdx] = useState(0)
@@ -24,19 +24,20 @@ function GeneratingContent() {
   const [status, setStatus] = useState<TryOnStatus>("pending")
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [pollingRun, setPollingRun] = useState(0)
+  const [sourceImageUrl, setSourceImageUrl] = useState(imageUrl)
 
   useEffect(() => {
     if (!isInitialized) return
 
-    if (!file || !previewUrl) {
+    if (!file || !imageUrl) {
       router.replace("/photo")
     } else if (!tryOnId) {
       router.replace("/play")
     }
-  }, [file, isInitialized, previewUrl, router, tryOnId])
+  }, [file, imageUrl, isInitialized, router, tryOnId])
 
   useEffect(() => {
-    if (!isInitialized || !file || !previewUrl || !tryOnId) return
+    if (!isInitialized || !file || !imageUrl || !tryOnId) return
 
     let active = true
     let pollTimer: number | undefined
@@ -72,6 +73,9 @@ function GeneratingContent() {
 
         failureCount = 0
         setStatus(data.tryOn.status)
+        if (data.tryOn.sourceImageUrl) {
+          setSourceImageUrl(data.tryOn.sourceImageUrl)
+        }
 
         if (data.tryOn.status === "failed") {
           setErrorMessage("The try-on could not be completed. Please try polling again.")
@@ -107,10 +111,10 @@ function GeneratingContent() {
         stopPollingRef.current = () => {}
       }
     }
-  }, [file, isInitialized, pollingRun, previewUrl, router, tryOnId])
+  }, [file, imageUrl, isInitialized, pollingRun, router, tryOnId])
 
   useEffect(() => {
-    if (!tryOnId || !file || !previewUrl || errorMessage || status === "completed") return
+    if (!tryOnId || !file || !sourceImageUrl || errorMessage || status === "completed") return
 
     const messageInterval = window.setInterval(() => {
       setMessageIdx((previous) => (previous + 1) % loadingMessages.length)
@@ -127,7 +131,7 @@ function GeneratingContent() {
       window.clearInterval(messageInterval)
       window.clearInterval(progressInterval)
     }
-  }, [errorMessage, file, previewUrl, status, tryOnId])
+  }, [errorMessage, file, sourceImageUrl, status, tryOnId])
 
   const retryPolling = () => {
     setErrorMessage(null)
@@ -142,7 +146,7 @@ function GeneratingContent() {
     router.push("/play")
   }
 
-  if (!isInitialized || !file || !previewUrl || !tryOnId) {
+  if (!isInitialized || !file || !sourceImageUrl || !tryOnId) {
     return <div className="min-h-screen bg-background" />
   }
 
@@ -203,7 +207,7 @@ function GeneratingContent() {
         {/* Blurred photo preview */}
         <div className="relative mx-auto mb-8 h-48 w-36 overflow-hidden rounded-3xl shadow-xl">
           <Image
-            src={previewUrl}
+            src={sourceImageUrl}
             alt=""
             fill
             className="object-cover"
