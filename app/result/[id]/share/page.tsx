@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation"
 import Image from "next/image"
 import { mockTryOns, mockChallenges } from "@/lib/mock-data"
-import { ChevronLeft, Download, Share2, Zap, Instagram } from "lucide-react"
+import { ChevronLeft, Download, Share2, Zap, ExternalLink } from "lucide-react"
 
 export default function SharePage() {
   const params = useParams()
@@ -133,7 +133,7 @@ export default function SharePage() {
               Save Image
             </button>
             <button className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/10 text-sm font-semibold text-white transition-all active:scale-95">
-              <Instagram className="h-4 w-4" aria-hidden="true" />
+              <ExternalLink className="h-4 w-4" aria-hidden="true" />
               Story
             </button>
           </div>
