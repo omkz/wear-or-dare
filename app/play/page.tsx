@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { AppShell } from "@/components/app-shell"
+import { usePhotoSession } from "@/components/providers/photo-session-provider"
 import { RouletteWheel } from "@/components/roulette-wheel"
 import type { Challenge } from "@/lib/types"
 import { mockSession, mockTryOns } from "@/lib/mock-data"
@@ -11,7 +12,14 @@ import Image from "next/image"
 
 export default function PlayPage() {
   const router = useRouter()
+  const { file, previewUrl, isInitialized } = usePhotoSession()
   const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null)
+
+  useEffect(() => {
+    if (isInitialized && (!file || !previewUrl)) {
+      router.replace("/photo")
+    }
+  }, [file, isInitialized, previewUrl, router])
 
   const handleResult = (challenge: Challenge) => {
     setSelectedChallenge(challenge)
@@ -23,6 +31,10 @@ export default function PlayPage() {
   }
 
   const lastResult = mockTryOns[0]
+
+  if (!isInitialized || !file || !previewUrl) {
+    return <div className="min-h-screen bg-background" />
+  }
 
   return (
     <AppShell>

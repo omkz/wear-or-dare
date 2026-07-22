@@ -4,12 +4,14 @@ import { useState, useEffect, useCallback, Suspense } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { X, RefreshCw } from "lucide-react"
+import { usePhotoSession } from "@/components/providers/photo-session-provider"
 import { loadingMessages } from "@/lib/mock-data"
 
 const FLOAT_ITEMS = ["👗", "👠", "🧥", "👒", "💍", "🕶️", "👜", "✨"]
 
 function GeneratingContent() {
   const router = useRouter()
+  const { file, previewUrl, isInitialized } = usePhotoSession()
 
   const [messageIdx, setMessageIdx] = useState(0)
   const [progress, setProgress] = useState(0)
@@ -52,15 +54,27 @@ function GeneratingContent() {
   }, [router])
 
   useEffect(() => {
+    if (isInitialized && (!file || !previewUrl)) {
+      router.replace("/photo")
+    }
+  }, [file, isInitialized, previewUrl, router])
+
+  useEffect(() => {
+    if (!isInitialized || !file || !previewUrl) return
+
     const cleanup = startGeneration()
     return cleanup
-  }, [startGeneration])
+  }, [file, isInitialized, previewUrl, startGeneration])
 
   const retryGeneration = () => {
     setError(false)
     setProgress(0)
     setMessageIdx(0)
     startGeneration()
+  }
+
+  if (!isInitialized || !file || !previewUrl) {
+    return <div className="min-h-screen bg-background" />
   }
 
   if (error) {
@@ -120,7 +134,7 @@ function GeneratingContent() {
         {/* Blurred photo preview */}
         <div className="relative mx-auto mb-8 h-48 w-36 overflow-hidden rounded-3xl shadow-xl">
           <Image
-            src="https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=400&h=600&fit=crop"
+            src={previewUrl}
             alt=""
             fill
             className="object-cover"
