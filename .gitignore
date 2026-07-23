@@ -18,3 +18,4 @@ node_modules
 .DS_Store
 storage/uploads/
 storage/results/
+next-env.d.ts
