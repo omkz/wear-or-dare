@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm"
+import { desc, eq } from "drizzle-orm"
 import { getDatabase } from "@/lib/db"
 import { sessions, tryOns, type TryOnRow } from "@/lib/db/schema"
 import { reconstructMockTryOn } from "@/lib/server/mock-try-on-engine"
@@ -105,6 +105,16 @@ export async function findTryOnByRequestId(requestId: string) {
     .where(eq(tryOns.requestId, requestId))
     .limit(1)
   return row ? toTryOn(row) : null
+}
+
+export async function listTryOnsBySessionId(sessionId: string) {
+  const rows = await getDatabase()
+    .select()
+    .from(tryOns)
+    .where(eq(tryOns.sessionId, sessionId))
+    .orderBy(desc(tryOns.createdAt))
+
+  return rows.map(toTryOn)
 }
 
 export async function refreshMockTryOn(id: string) {

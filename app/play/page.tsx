@@ -15,9 +15,8 @@ import type { Challenge } from "@/lib/types"
 import {
   mockGarmentIdByChallenge,
   mockGarments,
-  mockSession,
 } from "@/lib/mock-data"
-import { Flame, ArrowRight } from "lucide-react"
+import { ArrowRight, History as HistoryIcon } from "lucide-react"
 import Image from "next/image"
 
 export default function PlayPage() {
@@ -125,12 +124,13 @@ export default function PlayPage() {
               Today&apos;s Style Dare
             </h1>
           </div>
-          {/* Streak */}
-          <div className="flex items-center gap-1.5 rounded-2xl bg-accent/10 px-3 py-2 border border-accent/20">
-            <Flame className="h-4 w-4 text-accent" aria-hidden="true" />
-            <span className="text-sm font-black text-accent">{mockSession.streak}</span>
-            <span className="text-xs text-muted-foreground">day streak</span>
-          </div>
+          <button
+            onClick={() => router.push("/history")}
+            className="flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-3 text-xs font-bold text-foreground transition-all active:scale-95"
+          >
+            <HistoryIcon className="h-4 w-4 text-primary" aria-hidden="true" />
+            History
+          </button>
         </header>
 
         {/* Challenge categories strip */}

@@ -24,6 +24,11 @@ export interface GetTryOnResponse {
   tryOn: TryOn
 }
 
+export interface GetTryOnHistoryResponse {
+  success: true
+  tryOns: TryOn[]
+}
+
 export interface UpdateTryOnDecisionRequest {
   decision: "wear" | "dare"
 }

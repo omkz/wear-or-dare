@@ -8,6 +8,7 @@ import {
   Check,
   Zap,
   ChevronLeft,
+  History as HistoryIcon,
 } from "lucide-react"
 import type {
   ApiErrorResponse,
@@ -176,6 +177,13 @@ export default function ResultPage() {
             aria-label="Back to play"
           >
             <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+          </button>
+          <button
+            onClick={() => router.push("/history")}
+            className="pointer-events-auto flex h-10 items-center gap-2 rounded-xl bg-black/40 px-3 text-xs font-bold text-white backdrop-blur-sm transition-all active:scale-95"
+          >
+            <HistoryIcon className="h-4 w-4" aria-hidden="true" />
+            History
           </button>
         </div>
 
