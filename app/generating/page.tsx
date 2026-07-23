@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
 import { X, RefreshCw } from "lucide-react"
-import { usePhotoSession } from "@/components/providers/photo-session-provider"
 import type { ApiErrorResponse, GetTryOnResponse } from "@/lib/api-contracts"
 import { loadingMessages } from "@/lib/mock-data"
 import type { TryOnStatus } from "@/lib/types"
@@ -16,7 +15,6 @@ function GeneratingContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const tryOnId = searchParams.get("id")
-  const { file, imageUrl, isInitialized } = usePhotoSession()
   const stopPollingRef = useRef<() => void>(() => {})
 
   const [messageIdx, setMessageIdx] = useState(0)
@@ -24,20 +22,16 @@ function GeneratingContent() {
   const [status, setStatus] = useState<TryOnStatus>("pending")
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [pollingRun, setPollingRun] = useState(0)
-  const [sourceImageUrl, setSourceImageUrl] = useState(imageUrl)
+  const [sourceImageUrl, setSourceImageUrl] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!isInitialized) return
-
-    if (!file || !imageUrl) {
+    if (!tryOnId) {
       router.replace("/photo")
-    } else if (!tryOnId) {
-      router.replace("/play")
     }
-  }, [file, imageUrl, isInitialized, router, tryOnId])
+  }, [router, tryOnId])
 
   useEffect(() => {
-    if (!isInitialized || !file || !imageUrl || !tryOnId) return
+    if (!tryOnId) return
 
     let active = true
     let pollTimer: number | undefined
@@ -67,15 +61,21 @@ function GeneratingContent() {
         if (!active) return
 
         if (!response.ok || !data.success) {
+          if (response.status === 400 || response.status === 404) {
+            router.replace("/photo")
+            return
+          }
           setErrorMessage(data.success ? "This try-on could not be loaded." : data.error)
           return
         }
 
         failureCount = 0
         setStatus(data.tryOn.status)
-        if (data.tryOn.sourceImageUrl) {
-          setSourceImageUrl(data.tryOn.sourceImageUrl)
+        if (!data.tryOn.sourceImageUrl) {
+          setErrorMessage("The source photo for this try-on is unavailable.")
+          return
         }
+        setSourceImageUrl(data.tryOn.sourceImageUrl)
 
         if (data.tryOn.status === "failed") {
           setErrorMessage(
@@ -114,10 +114,10 @@ function GeneratingContent() {
         stopPollingRef.current = () => {}
       }
     }
-  }, [file, imageUrl, isInitialized, pollingRun, router, tryOnId])
+  }, [pollingRun, router, tryOnId])
 
   useEffect(() => {
-    if (!tryOnId || !file || !sourceImageUrl || errorMessage || status === "completed") return
+    if (!tryOnId || !sourceImageUrl || errorMessage || status === "completed") return
 
     const messageInterval = window.setInterval(() => {
       setMessageIdx((previous) => (previous + 1) % loadingMessages.length)
@@ -134,7 +134,7 @@ function GeneratingContent() {
       window.clearInterval(messageInterval)
       window.clearInterval(progressInterval)
     }
-  }, [errorMessage, file, sourceImageUrl, status, tryOnId])
+  }, [errorMessage, sourceImageUrl, status, tryOnId])
 
   const retryPolling = () => {
     setErrorMessage(null)
@@ -149,7 +149,7 @@ function GeneratingContent() {
     router.push("/play")
   }
 
-  if (!isInitialized || !file || !sourceImageUrl || !tryOnId) {
+  if (!tryOnId) {
     return <div className="min-h-screen bg-background" />
   }
 
@@ -174,6 +174,10 @@ function GeneratingContent() {
         </div>
       </div>
     )
+  }
+
+  if (!sourceImageUrl) {
+    return <div className="min-h-screen bg-background" />
   }
 
   return (
