@@ -28,6 +28,7 @@ export default function PlayPage() {
   const [isCreating, setIsCreating] = useState(false)
   const [creationError, setCreationError] = useState<string | null>(null)
   const creationInFlightRef = useRef(false)
+  const creationRequestIdRef = useRef<string | null>(null)
 
   const selectedGarment = selectedChallenge
     ? mockGarments.find(
@@ -42,6 +43,7 @@ export default function PlayPage() {
   }, [file, imageUrl, isInitialized, previewUrl, router, uploadId])
 
   const handleResult = (challenge: Challenge) => {
+    creationRequestIdRef.current = null
     setSelectedChallenge(challenge)
     setCreationError(null)
   }
@@ -49,6 +51,7 @@ export default function PlayPage() {
   const handleSpinAgain = () => {
     if (creationInFlightRef.current) return
 
+    creationRequestIdRef.current = null
     setSelectedChallenge(null)
     setCreationError(null)
     setWheelRun((current) => current + 1)
@@ -69,7 +72,10 @@ export default function PlayPage() {
     setCreationError(null)
 
     try {
+      const requestId = creationRequestIdRef.current ?? crypto.randomUUID()
+      creationRequestIdRef.current = requestId
       const requestBody: CreateTryOnRequest = {
+        requestId,
         sessionId: getAnonymousSessionId(),
         challengeId: selectedChallenge.id,
         sourceUploadId: uploadId,

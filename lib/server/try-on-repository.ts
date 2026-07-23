@@ -27,11 +27,19 @@ function toTryOn(row: TryOnRow): TryOn {
   }
 }
 
-export async function insertTryOn(tryOn: TryOn) {
+export interface ClaimTryOnRequestResult {
+  tryOn: TryOn
+  created: boolean
+}
+
+export async function claimTryOnRequest(
+  requestId: string,
+  tryOn: TryOn
+): Promise<ClaimTryOnRequestResult> {
   const database = getDatabase()
   const now = new Date()
 
-  await database.transaction(async (transaction) => {
+  return database.transaction(async (transaction) => {
     await transaction
       .insert(sessions)
       .values({ id: tryOn.sessionId, createdAt: now, updatedAt: now })
@@ -40,35 +48,62 @@ export async function insertTryOn(tryOn: TryOn) {
         set: { updatedAt: now },
       })
 
-    await transaction.insert(tryOns).values({
-      id: tryOn.id,
-      sessionId: tryOn.sessionId,
-      challengeId: tryOn.challengeId,
-      garmentId: tryOn.garmentId,
-      sourceImageUrl: tryOn.sourceImageUrl,
-      sourceUploadId: tryOn.sourceUploadId,
-      status: tryOn.status,
-      provider: tryOn.provider,
-      providerTaskId: tryOn.providerTaskId,
-      resultImageUrl: tryOn.resultImageUrl,
-      resultStoragePath: tryOn.resultStoragePath,
-      providerResultUrl: tryOn.providerResultUrl,
-      errorMessage: tryOn.errorMessage,
-      verdict: tryOn.verdict,
-      decision: tryOn.decision,
-      startedAt: tryOn.startedAt ? new Date(tryOn.startedAt) : null,
-      completedAt: tryOn.completedAt ? new Date(tryOn.completedAt) : null,
-      createdAt: new Date(tryOn.createdAt),
-      updatedAt: now,
-    })
-  })
+    const [inserted] = await transaction
+      .insert(tryOns)
+      .values({
+        id: tryOn.id,
+        requestId,
+        sessionId: tryOn.sessionId,
+        challengeId: tryOn.challengeId,
+        garmentId: tryOn.garmentId,
+        sourceImageUrl: tryOn.sourceImageUrl,
+        sourceUploadId: tryOn.sourceUploadId,
+        status: tryOn.status,
+        provider: tryOn.provider,
+        providerTaskId: tryOn.providerTaskId,
+        resultImageUrl: tryOn.resultImageUrl,
+        resultStoragePath: tryOn.resultStoragePath,
+        providerResultUrl: tryOn.providerResultUrl,
+        errorMessage: tryOn.errorMessage,
+        verdict: tryOn.verdict,
+        decision: tryOn.decision,
+        startedAt: tryOn.startedAt ? new Date(tryOn.startedAt) : null,
+        completedAt: tryOn.completedAt ? new Date(tryOn.completedAt) : null,
+        createdAt: new Date(tryOn.createdAt),
+        updatedAt: now,
+      })
+      .onConflictDoNothing({ target: tryOns.requestId })
+      .returning()
 
-  return tryOn
+    if (inserted) {
+      return { tryOn: toTryOn(inserted), created: true }
+    }
+
+    const [existing] = await transaction
+      .select()
+      .from(tryOns)
+      .where(eq(tryOns.requestId, requestId))
+      .limit(1)
+    if (!existing) {
+      throw new Error("Idempotent try-on claim could not be resolved")
+    }
+
+    return { tryOn: toTryOn(existing), created: false }
+  })
 }
 
 export async function findTryOn(id: string) {
   const database = getDatabase()
   const [row] = await database.select().from(tryOns).where(eq(tryOns.id, id)).limit(1)
+  return row ? toTryOn(row) : null
+}
+
+export async function findTryOnByRequestId(requestId: string) {
+  const [row] = await getDatabase()
+    .select()
+    .from(tryOns)
+    .where(eq(tryOns.requestId, requestId))
+    .limit(1)
   return row ? toTryOn(row) : null
 }
 
@@ -106,7 +141,9 @@ export async function updateYouCamTryOnState(
     resultImageUrl?: string
     resultStoragePath?: string | null
     providerResultUrl?: string | null
+    providerTaskId?: string | null
     errorMessage?: string | null
+    startedAt?: Date | null
     completedAt?: Date | null
   }
 ) {
@@ -123,8 +160,14 @@ export async function updateYouCamTryOnState(
       ...(update.providerResultUrl !== undefined
         ? { providerResultUrl: update.providerResultUrl }
         : {}),
+      ...(update.providerTaskId !== undefined
+        ? { providerTaskId: update.providerTaskId }
+        : {}),
       ...(update.errorMessage !== undefined
         ? { errorMessage: update.errorMessage }
+        : {}),
+      ...(update.startedAt !== undefined
+        ? { startedAt: update.startedAt }
         : {}),
       ...(update.completedAt !== undefined
         ? { completedAt: update.completedAt }

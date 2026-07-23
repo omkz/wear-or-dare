@@ -1,6 +1,7 @@
 import type { TryOn } from "@/lib/types"
 
 export interface CreateTryOnRequest {
+  requestId: string
   sessionId: string
   challengeId: string
   sourceUploadId: string

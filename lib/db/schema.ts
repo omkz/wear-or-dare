@@ -24,6 +24,7 @@ export const tryOns = pgTable(
   "try_ons",
   {
     id: text("id").primaryKey(),
+    requestId: uuid("request_id").defaultRandom().notNull().unique(),
     sessionId: varchar("session_id", { length: 160 })
       .notNull()
       .references(() => sessions.id, { onDelete: "cascade" }),

@@ -11,8 +11,13 @@ import { createYouCamProviderTask } from "@/lib/server/try-on-service"
 import {
   getTryOnProvider,
 } from "@/lib/server/try-on-provider"
-import { insertTryOn } from "@/lib/server/try-on-repository"
+import {
+  claimTryOnRequest,
+  findTryOnByRequestId,
+  updateYouCamTryOnState,
+} from "@/lib/server/try-on-repository"
 import { getSafeTryOnCreateError } from "@/lib/server/try-on-error-response"
+import type { TryOn } from "@/lib/types"
 
 function errorResponse(error: string, status: number) {
   const response: ApiErrorResponse = { success: false, error }
@@ -35,6 +40,25 @@ function logCreateError(
   })
 }
 
+function isValidRequestId(requestId: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    requestId
+  )
+}
+
+function matchesCreateRequest(tryOn: TryOn, requestBody: CreateTryOnRequest) {
+  return (
+    tryOn.sessionId === requestBody.sessionId &&
+    tryOn.challengeId === requestBody.challengeId &&
+    tryOn.sourceUploadId === requestBody.sourceUploadId
+  )
+}
+
+function successResponse(tryOn: TryOn, status: 200 | 201) {
+  const response: CreateTryOnResponse = { success: true, tryOn }
+  return NextResponse.json(response, { status })
+}
+
 export async function POST(request: NextRequest) {
   const body: unknown = await request.json().catch(() => null)
 
@@ -42,7 +66,10 @@ export async function POST(request: NextRequest) {
     return errorResponse("Malformed request body", 400)
   }
 
-  const { sessionId, challengeId, sourceUploadId } = body as Record<string, unknown>
+  const { requestId, sessionId, challengeId, sourceUploadId } = body as Record<string, unknown>
+  if (typeof requestId !== "string" || !isValidRequestId(requestId)) {
+    return errorResponse("Invalid request ID", 400)
+  }
   if (typeof sessionId !== "string" || !isValidSessionId(sessionId)) {
     return errorResponse("Invalid session ID", 400)
   }
@@ -53,10 +80,29 @@ export async function POST(request: NextRequest) {
     return errorResponse("Invalid source upload ID", 400)
   }
 
+  const requestBody: CreateTryOnRequest = {
+    requestId,
+    sessionId,
+    challengeId,
+    sourceUploadId,
+  }
+
+  try {
+    const existing = await findTryOnByRequestId(requestId)
+    if (existing) {
+      if (!matchesCreateRequest(existing, requestBody)) {
+        return errorResponse("Request ID is already in use", 409)
+      }
+      return successResponse(existing, 200)
+    }
+  } catch (error) {
+    logCreateError("find-idempotent-request", error, { challengeId })
+    return errorResponse("We couldn’t save the try-on. Please try again.", 500)
+  }
+
   const sourceUpload = await readUploadById(sourceUploadId)
   if (!sourceUpload) return errorResponse("Uploaded source photo not found", 400)
 
-  const requestBody: CreateTryOnRequest = { sessionId, challengeId, sourceUploadId }
   const baseTryOn = createMockTryOn(requestBody.sessionId, requestBody.challengeId)
   if (!baseTryOn) return errorResponse("Unable to create try-on", 400)
 
@@ -84,45 +130,38 @@ export async function POST(request: NextRequest) {
     return errorResponse(safeError.message, safeError.status)
   }
 
-  let providerTaskId: string | null = null
-  if (provider === "youcam") {
-    if (sourceUpload.contentType === "image/webp") {
-      return errorResponse(
-        "This provider supports JPEG or PNG photos only. Upload another photo and try again.",
-        400
-      )
-    }
-
-    try {
-      providerTaskId = await createYouCamProviderTask(sourceUpload, garment)
-    } catch (error) {
-      logCreateError("create-provider-task", error, {
-        challengeId,
-        garmentId: garment.id,
-        provider,
-      })
-      const safeError = getSafeTryOnCreateError(error)
-      return errorResponse(safeError.message, safeError.status)
-    }
+  if (provider === "youcam" && sourceUpload.contentType === "image/webp") {
+    return errorResponse(
+      "This provider supports JPEG or PNG photos only. Upload another photo and try again.",
+      400
+    )
   }
 
-  const tryOn = {
+  const initialTryOn: TryOn = {
     ...baseTryOn,
     sourceImageUrl: sourceUpload.imageUrl,
     sourceUploadId: sourceUpload.uploadId,
-    status: provider === "youcam" ? "processing" as const : baseTryOn.status,
+    status: "pending",
     provider,
-    providerTaskId,
+    providerTaskId: null,
     resultImageUrl: "",
     resultStoragePath: null,
     providerResultUrl: null,
     errorMessage: null,
-    startedAt: new Date().toISOString(),
+    startedAt: provider === "mock" ? baseTryOn.startedAt : null,
     completedAt: null,
   }
 
+  let claimedTryOn: TryOn
   try {
-    await insertTryOn(tryOn)
+    const claim = await claimTryOnRequest(requestId, initialTryOn)
+    if (!matchesCreateRequest(claim.tryOn, requestBody)) {
+      return errorResponse("Request ID is already in use", 409)
+    }
+    if (!claim.created) {
+      return successResponse(claim.tryOn, 200)
+    }
+    claimedTryOn = claim.tryOn
   } catch (error) {
     logCreateError("save-database-record", error, {
       challengeId,
@@ -132,6 +171,60 @@ export async function POST(request: NextRequest) {
     return errorResponse("We couldn’t save the try-on. Please try again.", 500)
   }
 
-  const response: CreateTryOnResponse = { success: true, tryOn }
-  return NextResponse.json(response, { status: 201 })
+  if (provider === "mock") {
+    return successResponse(claimedTryOn, 201)
+  }
+
+  let providerTaskId: string
+  try {
+    providerTaskId = await createYouCamProviderTask(sourceUpload, garment)
+  } catch (error) {
+    logCreateError("create-provider-task", error, {
+      challengeId,
+      garmentId: garment.id,
+      provider,
+    })
+    const safeError = getSafeTryOnCreateError(error)
+
+    try {
+      const failedTryOn = await updateYouCamTryOnState(claimedTryOn.id, {
+        status: "failed",
+        errorMessage: safeError.message,
+        completedAt: new Date(),
+      })
+      if (!failedTryOn) {
+        throw new Error("Claimed try-on disappeared before provider failure was saved")
+      }
+    } catch (databaseError) {
+      logCreateError("save-provider-failure", databaseError, {
+        challengeId,
+        garmentId: garment.id,
+        provider,
+      })
+      return errorResponse("We couldn’t save the try-on. Please try again.", 500)
+    }
+
+    return errorResponse(safeError.message, safeError.status)
+  }
+
+  try {
+    const startedTryOn = await updateYouCamTryOnState(claimedTryOn.id, {
+      status: "processing",
+      providerTaskId,
+      errorMessage: null,
+      startedAt: new Date(),
+      completedAt: null,
+    })
+    if (!startedTryOn) {
+      throw new Error("Claimed try-on disappeared before provider task was saved")
+    }
+    return successResponse(startedTryOn, 201)
+  } catch (error) {
+    logCreateError("save-provider-task", error, {
+      challengeId,
+      garmentId: garment.id,
+      provider,
+    })
+    return errorResponse("We couldn’t save the try-on. Please try again.", 500)
+  }
 }

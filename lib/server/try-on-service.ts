@@ -19,6 +19,7 @@ import { localStorageService } from "@/lib/server/storage"
 
 const MAX_YOUCAM_IMAGE_SIZE = 10 * 1024 * 1024
 const MAX_YOUCAM_RESULT_SIZE = 15 * 1024 * 1024
+const PROVIDER_START_GRACE_MS = 2 * 60 * 1000
 const SAFE_FAILED_TASK_MESSAGE = "The virtual try-on could not be completed. Please try again."
 const SAFE_MISSING_TASK_MESSAGE = "The virtual try-on task is unavailable. Please try again."
 
@@ -92,6 +93,11 @@ export async function synchronizeYouCamTryOn(tryOn: TryOn) {
   }
 
   if (!tryOn.providerTaskId) {
+    const age = Date.now() - new Date(tryOn.createdAt).getTime()
+    if (tryOn.status === "pending" && age < PROVIDER_START_GRACE_MS) {
+      return tryOn
+    }
+
     return updateYouCamTryOnState(tryOn.id, {
       status: "failed",
       errorMessage: SAFE_MISSING_TASK_MESSAGE,
