@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { AppShell } from "@/components/app-shell"
 import { usePhotoSession } from "@/components/providers/photo-session-provider"
@@ -12,7 +12,12 @@ import type {
   CreateTryOnResponse,
 } from "@/lib/api-contracts"
 import type { Challenge } from "@/lib/types"
-import { mockSession, mockTryOns } from "@/lib/mock-data"
+import {
+  mockGarmentIdByChallenge,
+  mockGarments,
+  mockSession,
+  mockTryOns,
+} from "@/lib/mock-data"
 import { Flame, ArrowRight } from "lucide-react"
 import Image from "next/image"
 
@@ -20,8 +25,16 @@ export default function PlayPage() {
   const router = useRouter()
   const { file, previewUrl, uploadId, imageUrl, isInitialized } = usePhotoSession()
   const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null)
+  const [wheelRun, setWheelRun] = useState(0)
   const [isCreating, setIsCreating] = useState(false)
   const [creationError, setCreationError] = useState<string | null>(null)
+  const creationInFlightRef = useRef(false)
+
+  const selectedGarment = selectedChallenge
+    ? mockGarments.find(
+        (garment) => garment.id === mockGarmentIdByChallenge[selectedChallenge.id]
+      ) ?? null
+    : null
 
   useEffect(() => {
     if (isInitialized && (!file || !previewUrl || !uploadId || !imageUrl)) {
@@ -34,9 +47,25 @@ export default function PlayPage() {
     setCreationError(null)
   }
 
-  const handleContinue = async () => {
-    if (!selectedChallenge || !uploadId || isCreating) return
+  const handleSpinAgain = () => {
+    if (creationInFlightRef.current) return
 
+    setSelectedChallenge(null)
+    setCreationError(null)
+    setWheelRun((current) => current + 1)
+  }
+
+  const handleTryThisLook = async () => {
+    if (
+      !selectedChallenge ||
+      !selectedGarment ||
+      !uploadId ||
+      creationInFlightRef.current
+    ) {
+      return
+    }
+
+    creationInFlightRef.current = true
     setIsCreating(true)
     setCreationError(null)
 
@@ -61,6 +90,7 @@ export default function PlayPage() {
     } catch {
       setCreationError("We couldn’t start your try-on. Please try again.")
     } finally {
+      creationInFlightRef.current = false
       setIsCreating(false)
     }
   }
@@ -111,31 +141,69 @@ export default function PlayPage() {
 
         {/* Roulette */}
         <div className="px-5 flex flex-col items-center">
-          <RouletteWheel onResult={handleResult} />
+          <RouletteWheel
+            key={wheelRun}
+            onResult={handleResult}
+            disabled={Boolean(selectedChallenge) || isCreating}
+          />
         </div>
 
-        {/* Continue button */}
+        {/* Selected look */}
         <div className="px-5 mt-6">
-          <button
-            onClick={handleContinue}
-            disabled={!selectedChallenge || isCreating}
-            className={`flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-base font-bold shadow-lg transition-all ${
-              selectedChallenge && !isCreating
-                ? "bg-primary text-primary-foreground active:scale-95 hover:opacity-90"
-                : "bg-muted text-muted-foreground cursor-not-allowed"
-            }`}
-          >
-            {isCreating ? (
-              "Creating your look…"
-            ) : selectedChallenge ? (
-              <>
-                Try &quot;{selectedChallenge.title}&quot;
-                <ArrowRight className="h-5 w-5" aria-hidden="true" />
-              </>
-            ) : (
-              "Spin to select a challenge"
-            )}
-          </button>
+          {selectedChallenge && selectedGarment ? (
+            <div className="pop-in overflow-hidden rounded-3xl border border-border bg-card shadow-lg">
+              <div className="flex gap-4 p-4">
+                <div className="relative h-32 w-24 shrink-0 overflow-hidden rounded-2xl bg-secondary">
+                  <Image
+                    src={selectedGarment.imageUrl}
+                    alt={selectedGarment.name}
+                    fill
+                    sizes="96px"
+                    className="object-cover"
+                  />
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col justify-center">
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-primary">
+                    {selectedChallenge.title}
+                  </p>
+                  <h2 className="text-xl font-black leading-tight text-foreground">
+                    {selectedGarment.name}
+                  </h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {selectedGarment.brand} · {selectedGarment.category}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3 border-t border-border p-4">
+                <button
+                  onClick={handleSpinAgain}
+                  disabled={isCreating}
+                  className="flex h-12 flex-1 items-center justify-center rounded-2xl border-2 border-border bg-background text-sm font-semibold text-foreground transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Spin Again
+                </button>
+                <button
+                  onClick={handleTryThisLook}
+                  disabled={isCreating}
+                  className="flex h-12 flex-[1.4] items-center justify-center gap-2 rounded-2xl bg-primary text-sm font-bold text-primary-foreground shadow-lg transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isCreating ? "Creating…" : "Try This Look"}
+                  {!isCreating && <ArrowRight className="h-4 w-4" aria-hidden="true" />}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex h-14 w-full items-center justify-center rounded-2xl bg-muted text-sm font-bold text-muted-foreground">
+              Spin to select a challenge
+            </div>
+          )}
+
+          {selectedChallenge && !selectedGarment && (
+            <p className="mt-3 text-center text-xs font-semibold text-destructive" role="alert">
+              This challenge does not have an available garment.
+            </p>
+          )}
           {creationError && (
             <p className="mt-3 text-center text-xs font-semibold text-destructive" role="alert">
               {creationError}

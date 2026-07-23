@@ -1,5 +1,10 @@
 import { randomUUID } from "node:crypto"
-import { mockChallenges, mockGarments, verdicts } from "@/lib/mock-data"
+import {
+  mockChallenges,
+  mockGarmentIdByChallenge,
+  mockGarments,
+  verdicts,
+} from "@/lib/mock-data"
 import type { TryOn, TryOnStatus } from "@/lib/types"
 
 const TOKEN_PREFIX = "tryon-v1."
@@ -15,20 +20,6 @@ const resultImages = [
   "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=600&h=900&fit=crop",
   "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600&h=900&fit=crop",
 ] as const
-
-const garmentByChallenge: Record<string, string> = {
-  "ch-001": "g-003",
-  "ch-002": "g-006",
-  "ch-003": "g-002",
-  "ch-004": "g-005",
-  "ch-005": "g-004",
-  "ch-006": "g-001",
-  "ch-007": "g-003",
-  "ch-008": "g-005",
-  "ch-009": "g-001",
-  "ch-010": "g-004",
-  "ch-011": "g-005",
-}
 
 interface TryOnTokenPayload {
   v: 1
@@ -101,7 +92,7 @@ function parsePayload(id: string, now: number): TryOnTokenPayload | null {
 
     const challengeExists = mockChallenges.some((challenge) => challenge.id === payload.c)
     const garmentExists = mockGarments.some((garment) => garment.id === payload.g)
-    const expectedGarment = garmentByChallenge[payload.c]
+    const expectedGarment = mockGarmentIdByChallenge[payload.c]
 
     if (
       payload.v !== 1 ||
@@ -167,13 +158,13 @@ export function isValidChallengeId(challengeId: string) {
 }
 
 export function getGarmentIdForChallenge(challengeId: string) {
-  return garmentByChallenge[challengeId] ?? null
+  return mockGarmentIdByChallenge[challengeId] ?? null
 }
 
 export function createMockTryOn(sessionId: string, challengeId: string, now = Date.now()) {
   if (!isValidSessionId(sessionId) || !isValidChallengeId(challengeId)) return null
 
-  const garmentId = garmentByChallenge[challengeId]
+  const garmentId = mockGarmentIdByChallenge[challengeId]
   if (!garmentId) return null
 
   const nonce = randomUUID()

@@ -155,7 +155,7 @@ export function RouletteWheel({ onResult, disabled }: RouletteWheelProps) {
         disabled={isSpinning || disabled}
         className={cn(
           "relative h-16 w-48 rounded-2xl text-base font-black text-white shadow-xl transition-all",
-          isSpinning
+          isSpinning || disabled
             ? "cursor-not-allowed opacity-60 bg-primary"
             : "bg-primary active:scale-95 hover:opacity-90 pulse-ring"
         )}

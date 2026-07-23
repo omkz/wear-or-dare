@@ -178,6 +178,20 @@ export const mockGarments: Garment[] = [
   },
 ]
 
+export const mockGarmentIdByChallenge: Readonly<Record<string, string>> = {
+  "ch-001": "g-003",
+  "ch-002": "g-006",
+  "ch-003": "g-002",
+  "ch-004": "g-005",
+  "ch-005": "g-004",
+  "ch-006": "g-001",
+  "ch-007": "g-003",
+  "ch-008": "g-005",
+  "ch-009": "g-001",
+  "ch-010": "g-004",
+  "ch-011": "g-005",
+}
+
 export const mockTryOns: TryOn[] = [
   {
     id: "tryon-001",
