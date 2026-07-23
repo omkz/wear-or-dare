@@ -9,6 +9,8 @@ import { localStorageService } from "@/lib/server/storage"
 
 export const runtime = "nodejs"
 
+const ACCEPTED_UPLOAD_TYPES = new Set(["image/jpeg", "image/png"])
+
 function errorResponse(error: string, status: number) {
   const response: ApiErrorResponse = { success: false, error }
   return NextResponse.json(response, { status })
@@ -21,8 +23,8 @@ export async function POST(request: NextRequest) {
   const file = formData.get("file")
   if (!(file instanceof File)) return errorResponse("An image file is required", 400)
 
-  if (!isAcceptedImageMimeType(file.type)) {
-    return errorResponse("Only JPEG, PNG, and WebP images are supported", 400)
+  if (!ACCEPTED_UPLOAD_TYPES.has(file.type) || !isAcceptedImageMimeType(file.type)) {
+    return errorResponse("Only JPEG and PNG photos are supported", 400)
   }
 
   if (file.size === 0) return errorResponse("The image file is empty", 400)

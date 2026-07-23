@@ -20,8 +20,8 @@ import type {
   UploadPhotoResponse,
 } from "@/lib/api-contracts"
 
-const ACCEPTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"])
-const ACCEPTED_IMAGE_TYPES_ATTRIBUTE = "image/jpeg,image/png,image/webp"
+const ACCEPTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png"])
+const ACCEPTED_IMAGE_TYPES_ATTRIBUTE = "image/jpeg,image/png"
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const MAX_CAPTURE_DIMENSION = 2048
 
@@ -49,6 +49,7 @@ export default function PhotoPage() {
   const [cameraError, setCameraError] = useState<string | null>(null)
   const [isStartingCamera, setIsStartingCamera] = useState(false)
   const [isCapturing, setIsCapturing] = useState(false)
+  const [hasProcessingConsent, setHasProcessingConsent] = useState(false)
 
   const stopCamera = useCallback(() => {
     cameraRequestRef.current += 1
@@ -60,24 +61,20 @@ export default function PhotoPage() {
   }, [])
 
   const handleFile = useCallback((file: File) => {
-    if (!file.type.startsWith("image/")) {
-      setValidationError("Please choose an image file.")
-      return
-    }
-
     if (!ACCEPTED_IMAGE_TYPES.has(file.type)) {
-      setValidationError("Only JPEG, PNG, and WebP images are supported.")
+      setValidationError("Unsupported photo format. Please choose a JPEG or PNG photo.")
       return
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      setValidationError("Photo must be 10 MB or smaller.")
+      setValidationError("This photo is too large. Please choose one that is 10 MB or smaller.")
       return
     }
 
     setValidationError(null)
     setUploadError(null)
     setCameraError(null)
+    setHasProcessingConsent(false)
     stopCamera()
     setPhoto(file)
   }, [setPhoto, stopCamera])
@@ -222,7 +219,7 @@ export default function PhotoPage() {
   }
 
   const handleContinue = async () => {
-    if (!file || !previewUrl || isUploading) return
+    if (!file || !previewUrl || !hasProcessingConsent || isUploading) return
 
     setIsUploading(true)
     setUploadError(null)
@@ -257,6 +254,7 @@ export default function PhotoPage() {
   const handleRetake = () => {
     setValidationError(null)
     setUploadError(null)
+    setHasProcessingConsent(false)
     clearPhoto()
     void startCamera()
   }
@@ -440,6 +438,19 @@ export default function PhotoPage() {
               </div>
             </div>
 
+            <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-card p-3">
+              <input
+                type="checkbox"
+                checked={hasProcessingConsent}
+                onChange={(event) => setHasProcessingConsent(event.target.checked)}
+                required
+                className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+              />
+              <span className="text-xs leading-relaxed text-foreground">
+                I agree that my photo may be processed by YouCam to generate the virtual try-on.
+              </span>
+            </label>
+
             <div className="mt-4 flex gap-3">
               <button
                 onClick={handleRetake}
@@ -451,7 +462,7 @@ export default function PhotoPage() {
               </button>
               <button
                 onClick={handleContinue}
-                disabled={!file || !previewUrl || isUploading}
+                disabled={!file || !previewUrl || !hasProcessingConsent || isUploading}
                 className="flex h-12 flex-[2] items-center justify-center gap-2 rounded-2xl bg-primary text-sm font-bold text-primary-foreground shadow-lg transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isUploading ? "Uploading…" : "Continue"}
@@ -469,7 +480,8 @@ export default function PhotoPage() {
             <div className="mt-4 flex items-start gap-2 rounded-xl bg-card border border-border p-3">
               <Shield className="h-4 w-4 text-primary mt-0.5 shrink-0" aria-hidden="true" />
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Your photo is stored locally for this try-on and is never shared.
+                Your photo is stored for this try-on and may be sent to YouCam for AI
+                processing. It is not publicly shared.
               </p>
             </div>
           </div>

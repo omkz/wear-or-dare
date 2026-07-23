@@ -10,8 +10,8 @@ export function PrivacyBanner() {
         <div>
           <p className="text-sm font-semibold text-foreground">Your privacy is protected</p>
           <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">
-            Your photo is only used to create your virtual look. We never store or share your images.
-            No account required to play.
+            Your photo is stored for the try-on and may be sent to YouCam for AI processing.
+            It is not publicly shared.
           </p>
         </div>
       </div>
