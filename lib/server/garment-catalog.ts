@@ -39,45 +39,45 @@ interface GarmentProviderConfiguration {
 const garmentProviderConfiguration: Record<string, GarmentProviderConfiguration> = {
   "g-001": {
     imageLocation: {
-      type: "remote",
-      url: "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=1200&fit=crop",
+      type: "local",
+      path: "garments/sample-full-body.png",
     },
-    youCamCategory: "upper_body",
+    youCamCategory: "full_body",
   },
   "g-002": {
     imageLocation: {
-      type: "remote",
-      url: "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=1200&fit=crop",
+      type: "local",
+      path: "garments/sample-full-body.png",
     },
-    youCamCategory: "lower_body",
+    youCamCategory: "full_body",
   },
   "g-003": {
     imageLocation: {
-      type: "remote",
-      url: "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=1200&fit=crop",
+      type: "local",
+      path: "garments/sample-full-body.png",
     },
     youCamCategory: "full_body",
   },
   "g-004": {
     imageLocation: {
-      type: "remote",
-      url: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=1200&fit=crop",
+      type: "local",
+      path: "garments/sample-full-body.png",
     },
-    youCamCategory: "upper_body",
+    youCamCategory: "full_body",
   },
   "g-005": {
     imageLocation: {
-      type: "remote",
-      url: "https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=1200&fit=crop",
+      type: "local",
+      path: "garments/sample-full-body.png",
     },
     youCamCategory: "full_body",
   },
   "g-006": {
     imageLocation: {
-      type: "remote",
-      url: "https://images.unsplash.com/photo-1703863128779-842936251b15?w=1200&fit=crop",
+      type: "local",
+      path: "garments/sample-full-body.png",
     },
-    youCamCategory: "lower_body",
+    youCamCategory: "full_body",
   },
 }
 
