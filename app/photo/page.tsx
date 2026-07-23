@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import {
@@ -23,6 +23,7 @@ import type {
 const ACCEPTED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"])
 const ACCEPTED_IMAGE_TYPES_ATTRIBUTE = "image/jpeg,image/png,image/webp"
 const MAX_FILE_SIZE = 10 * 1024 * 1024
+const MAX_CAPTURE_DIMENSION = 2048
 
 const tips = [
   { icon: CheckCircle, text: "Stand facing the camera", ok: true },
@@ -35,11 +36,28 @@ export default function PhotoPage() {
   const router = useRouter()
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const cameraStreamRef = useRef<MediaStream | null>(null)
+  const cameraRequestRef = useRef(0)
+  const isMountedRef = useRef(true)
   const { file, previewUrl, setPhoto, setUploadedPhoto, clearPhoto } = usePhotoSession()
   const [isDragging, setIsDragging] = useState(false)
   const [validationError, setValidationError] = useState<string | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null)
+  const [cameraError, setCameraError] = useState<string | null>(null)
+  const [isStartingCamera, setIsStartingCamera] = useState(false)
+  const [isCapturing, setIsCapturing] = useState(false)
+
+  const stopCamera = useCallback(() => {
+    cameraRequestRef.current += 1
+    cameraStreamRef.current?.getTracks().forEach((track) => track.stop())
+    cameraStreamRef.current = null
+    setCameraStream(null)
+    setIsStartingCamera(false)
+    setIsCapturing(false)
+  }, [])
 
   const handleFile = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) {
@@ -59,8 +77,136 @@ export default function PhotoPage() {
 
     setValidationError(null)
     setUploadError(null)
+    setCameraError(null)
+    stopCamera()
     setPhoto(file)
-  }, [setPhoto])
+  }, [setPhoto, stopCamera])
+
+  const startCamera = useCallback(async () => {
+    setValidationError(null)
+    setUploadError(null)
+    setCameraError(null)
+
+    if (!window.isSecureContext) {
+      setCameraError("Camera access requires localhost or a secure HTTPS connection.")
+      return
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      cameraInputRef.current?.click()
+      return
+    }
+
+    stopCamera()
+    const requestId = cameraRequestRef.current + 1
+    cameraRequestRef.current = requestId
+    setIsStartingCamera(true)
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1280 },
+          height: { ideal: 1920 },
+        },
+      })
+
+      if (!isMountedRef.current || cameraRequestRef.current !== requestId) {
+        stream.getTracks().forEach((track) => track.stop())
+        return
+      }
+
+      cameraStreamRef.current = stream
+      setCameraStream(stream)
+    } catch (error) {
+      if (!isMountedRef.current || cameraRequestRef.current !== requestId) return
+
+      const errorName = error instanceof DOMException ? error.name : ""
+      if (errorName === "NotAllowedError") {
+        setCameraError("Camera access was denied. Allow camera permission and try again.")
+      } else if (errorName === "NotFoundError") {
+        setCameraError("No camera was found on this device.")
+      } else if (errorName === "NotReadableError") {
+        setCameraError("The camera is already in use by another application.")
+      } else {
+        setCameraError("We couldn’t open the camera. Please try again or choose a photo.")
+      }
+    } finally {
+      if (isMountedRef.current && cameraRequestRef.current === requestId) {
+        setIsStartingCamera(false)
+      }
+    }
+  }, [stopCamera])
+
+  const capturePhoto = async () => {
+    const video = videoRef.current
+    if (!video || video.videoWidth === 0 || video.videoHeight === 0 || isCapturing) {
+      setCameraError("The camera is still getting ready. Please try again.")
+      return
+    }
+
+    setIsCapturing(true)
+    setCameraError(null)
+
+    try {
+      const scale = Math.min(
+        1,
+        MAX_CAPTURE_DIMENSION / Math.max(video.videoWidth, video.videoHeight)
+      )
+      const canvas = document.createElement("canvas")
+      canvas.width = Math.round(video.videoWidth * scale)
+      canvas.height = Math.round(video.videoHeight * scale)
+      const context = canvas.getContext("2d")
+      if (!context) throw new Error("Canvas is unavailable")
+
+      context.drawImage(video, 0, 0, canvas.width, canvas.height)
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(
+          (result) => {
+            if (result) resolve(result)
+            else reject(new Error("Photo capture failed"))
+          },
+          "image/jpeg",
+          0.9
+        )
+      })
+      const capturedFile = new File([blob], `camera-${Date.now()}.jpg`, {
+        type: "image/jpeg",
+        lastModified: Date.now(),
+      })
+
+      handleFile(capturedFile)
+    } catch {
+      setCameraError("We couldn’t capture the photo. Please try again.")
+      setIsCapturing(false)
+    }
+  }
+
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video || !cameraStream) return
+
+    video.srcObject = cameraStream
+    void video.play().catch(() => {
+      setCameraError("The camera preview could not start. Please try again.")
+    })
+
+    return () => {
+      if (video.srcObject === cameraStream) video.srcObject = null
+    }
+  }, [cameraStream])
+
+  useEffect(() => {
+    isMountedRef.current = true
+
+    return () => {
+      isMountedRef.current = false
+      cameraRequestRef.current += 1
+      cameraStreamRef.current?.getTracks().forEach((track) => track.stop())
+      cameraStreamRef.current = null
+    }
+  }, [])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -112,7 +258,7 @@ export default function PhotoPage() {
     setValidationError(null)
     setUploadError(null)
     clearPhoto()
-    cameraInputRef.current?.click()
+    void startCamera()
   }
 
   return (
@@ -177,37 +323,82 @@ export default function PhotoPage() {
                 role="region"
                 aria-label="Photo upload area"
               >
-                {/* Silhouette guide */}
-                <div className="mb-5 flex h-36 w-20 items-center justify-center rounded-2xl bg-secondary" aria-hidden="true">
-                  <User className="h-20 w-20 text-muted-foreground/30" />
-                </div>
-                <p className="text-center text-sm font-semibold text-foreground mb-1">
-                  Full-body photo required
-                </p>
-                <p className="text-center text-xs text-muted-foreground mb-6">
-                  Drag & drop or choose from options below
-                </p>
+                {cameraStream ? (
+                  <div className="w-full">
+                    <div className="relative mx-auto mb-5 aspect-[3/4] w-full max-w-xs overflow-hidden rounded-2xl bg-black">
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        muted
+                        playsInline
+                        className="h-full w-full object-contain"
+                        aria-label="Live camera preview"
+                      />
+                    </div>
+                    <p className="mb-4 text-center text-xs text-muted-foreground">
+                      Keep your full body inside the frame
+                    </p>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => {
+                          stopCamera()
+                          setCameraError(null)
+                        }}
+                        disabled={isCapturing}
+                        className="flex h-12 flex-1 items-center justify-center rounded-2xl border-2 border-border bg-background text-sm font-semibold text-foreground transition-all active:scale-95 disabled:opacity-60"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => void capturePhoto()}
+                        disabled={isCapturing}
+                        className="flex h-12 flex-[2] items-center justify-center gap-2 rounded-2xl bg-primary text-sm font-bold text-primary-foreground transition-all active:scale-95 disabled:opacity-60"
+                      >
+                        <Camera className="h-5 w-5" aria-hidden="true" />
+                        {isCapturing ? "Capturing…" : "Capture Photo"}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Silhouette guide */}
+                    <div className="mb-5 flex h-36 w-20 items-center justify-center rounded-2xl bg-secondary" aria-hidden="true">
+                      <User className="h-20 w-20 text-muted-foreground/30" />
+                    </div>
+                    <p className="text-center text-sm font-semibold text-foreground mb-1">
+                      Full-body photo required
+                    </p>
+                    <p className="text-center text-xs text-muted-foreground mb-6">
+                      Drag & drop or choose from options below
+                    </p>
 
-                <div className="flex w-full flex-col gap-3">
-                  <button
-                    onClick={() => cameraInputRef.current?.click()}
-                    className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-primary text-sm font-bold text-primary-foreground transition-all active:scale-95"
-                  >
-                    <Camera className="h-5 w-5" aria-hidden="true" />
-                    Take a Photo
-                  </button>
-                  <button
-                    onClick={() => galleryInputRef.current?.click()}
-                    className="flex h-12 items-center justify-center gap-2 rounded-2xl border-2 border-border bg-background text-sm font-semibold text-foreground transition-all active:scale-95"
-                  >
-                    <ImagePlus className="h-5 w-5" aria-hidden="true" />
-                    Choose from Gallery
-                  </button>
-                </div>
+                    <div className="flex w-full flex-col gap-3">
+                      <button
+                        onClick={() => void startCamera()}
+                        disabled={isStartingCamera}
+                        className="flex h-12 items-center justify-center gap-2 rounded-2xl bg-primary text-sm font-bold text-primary-foreground transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <Camera className="h-5 w-5" aria-hidden="true" />
+                        {isStartingCamera ? "Opening Camera…" : "Take a Photo"}
+                      </button>
+                      <button
+                        onClick={() => {
+                          stopCamera()
+                          galleryInputRef.current?.click()
+                        }}
+                        disabled={isStartingCamera}
+                        className="flex h-12 items-center justify-center gap-2 rounded-2xl border-2 border-border bg-background text-sm font-semibold text-foreground transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <ImagePlus className="h-5 w-5" aria-hidden="true" />
+                        Choose from Gallery
+                      </button>
+                    </div>
+                  </>
+                )}
 
-                {validationError && (
+                {(validationError || cameraError) && (
                   <p className="mt-3 text-center text-xs font-semibold text-destructive" role="alert">
-                    {validationError}
+                    {validationError ?? cameraError}
                   </p>
                 )}
               </div>
