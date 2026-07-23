@@ -4,10 +4,6 @@ import { useEffect, useRef, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
 import Image from "next/image"
 import {
-  Heart,
-  Share2,
-  Swords,
-  ShoppingBag,
   RotateCcw,
   Check,
   Zap,
@@ -39,7 +35,6 @@ export default function ResultPage() {
 
   const [tryOn, setTryOn] = useState<TryOn | null>(null)
   const [decision, setDecision] = useState<"wear" | "dare" | null>(null)
-  const [saved, setSaved] = useState(false)
   const [celebrating, setCelebrating] = useState(false)
   const [isSavingDecision, setIsSavingDecision] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -70,7 +65,6 @@ export default function ResultPage() {
 
         setTryOn(data.tryOn)
         setDecision(data.tryOn.decision)
-        setSaved(data.tryOn.decision === "wear")
       } catch (error) {
         if (!active || (error instanceof DOMException && error.name === "AbortError")) return
         setLoadError("We couldn’t load this try-on. Please try again.")
@@ -120,7 +114,6 @@ export default function ResultPage() {
       }
 
       setCelebrating(true)
-      setSaved(true)
       celebrationTimerRef.current = window.setTimeout(() => setCelebrating(false), 1500)
     } catch {
       setDecisionError("We couldn’t save that choice. Please try again.")
@@ -184,25 +177,6 @@ export default function ResultPage() {
           >
             <ChevronLeft className="h-5 w-5" aria-hidden="true" />
           </button>
-          <div className="flex gap-2 pointer-events-auto">
-            <button
-              onClick={() => setSaved(!saved)}
-              className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-xl backdrop-blur-sm transition-all active:scale-95",
-                saved ? "bg-accent text-white" : "bg-black/40 text-white"
-              )}
-              aria-label={saved ? "Unsave look" : "Save look"}
-            >
-              <Heart className={cn("h-5 w-5", saved && "fill-current")} aria-hidden="true" />
-            </button>
-            <button
-              onClick={() => router.push("/result/" + id + "/share")}
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-black/40 backdrop-blur-sm text-white transition-all active:scale-95"
-              aria-label="Share this look"
-            >
-              <Share2 className="h-5 w-5" aria-hidden="true" />
-            </button>
-          </div>
         </div>
 
         {/* Result image */}
@@ -269,20 +243,13 @@ export default function ResultPage() {
           </div>
 
           {/* Product card */}
-          <div className="mb-6 flex items-center justify-between rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <div className="mb-6 rounded-2xl border border-border bg-card p-4 shadow-sm">
             <div>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                 Featured piece
               </p>
               <p className="font-bold text-foreground mt-0.5">{garment.name}</p>
               <p className="text-sm text-muted-foreground">{garment.brand}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-xl font-black text-foreground">${garment.price}</p>
-              <button className="mt-1 flex items-center gap-1 text-xs font-semibold text-primary">
-                <ShoppingBag className="h-3.5 w-3.5" aria-hidden="true" />
-                View item
-              </button>
             </div>
           </div>
 
@@ -322,31 +289,7 @@ export default function ResultPage() {
               {decisionError}
             </p>
           )}
-
-          {/* Secondary actions */}
-          <div className="grid grid-cols-3 gap-2 mb-8">
-            <button
-              onClick={() => router.push("/saved")}
-              className="flex flex-col items-center gap-1 rounded-xl border border-border bg-card p-3 transition-all active:scale-95"
-            >
-              <Heart className={cn("h-5 w-5", saved ? "text-accent fill-accent" : "text-muted-foreground")} aria-hidden="true" />
-              <span className="text-xs font-medium text-muted-foreground">Save</span>
-            </button>
-            <button
-              onClick={() => router.push("/battle")}
-              className="flex flex-col items-center gap-1 rounded-xl border border-border bg-card p-3 transition-all active:scale-95"
-            >
-              <Swords className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
-              <span className="text-xs font-medium text-muted-foreground">Compare</span>
-            </button>
-            <button
-              onClick={() => router.push("/result/" + id + "/share")}
-              className="flex flex-col items-center gap-1 rounded-xl border border-border bg-card p-3 transition-all active:scale-95"
-            >
-              <Share2 className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
-              <span className="text-xs font-medium text-muted-foreground">Share</span>
-            </button>
-          </div>
+          <div className="mb-8" />
         </div>
       </div>
     </div>

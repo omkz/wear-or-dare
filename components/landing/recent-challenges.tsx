@@ -1,27 +1,20 @@
 import Link from "next/link"
 import { mockChallenges } from "@/lib/mock-data"
 import { BoldnessIndicator } from "@/components/boldness-indicator"
-import { ArrowRight, Users } from "lucide-react"
+import { Users } from "lucide-react"
 
 export function RecentChallenges() {
   const featured = mockChallenges.slice(0, 4)
 
   return (
     <section className="px-5 py-6">
-      <div className="mb-5 flex items-center justify-between">
+      <div className="mb-5">
         <h2
           className="text-2xl font-black tracking-tight"
           style={{ fontFamily: "var(--font-display, sans-serif)" }}
         >
           Trending Dares
         </h2>
-        <Link
-          href="/challenges"
-          className="flex items-center gap-1 text-sm font-semibold text-primary"
-        >
-          See all
-          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-        </Link>
       </div>
       <div className="grid grid-cols-2 gap-3">
         {featured.map((challenge) => (

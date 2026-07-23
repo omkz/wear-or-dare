@@ -16,7 +16,6 @@ import {
   mockGarmentIdByChallenge,
   mockGarments,
   mockSession,
-  mockTryOns,
 } from "@/lib/mock-data"
 import { Flame, ArrowRight } from "lucide-react"
 import Image from "next/image"
@@ -99,8 +98,6 @@ export default function PlayPage() {
       setIsCreating(false)
     }
   }
-
-  const lastResult = mockTryOns[0]
 
   if (!isInitialized || !file || !previewUrl || !uploadId || !imageUrl) {
     return <div className="min-h-screen bg-background" />
@@ -215,56 +212,6 @@ export default function PlayPage() {
             </p>
           )}
         </div>
-
-        {/* Previous result */}
-        {lastResult && (
-          <div className="px-5 mt-8">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
-                Your last look
-              </h2>
-              <button
-                onClick={() => router.push(`/result/${lastResult.id}`)}
-                className="flex items-center gap-1 text-xs font-semibold text-primary"
-              >
-                See result
-                <ArrowRight className="h-3 w-3" aria-hidden="true" />
-              </button>
-            </div>
-            <div
-              className="relative overflow-hidden rounded-2xl shadow-md cursor-pointer active:scale-95 transition-all"
-              style={{ height: 180 }}
-              onClick={() => router.push(`/result/${lastResult.id}`)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => e.key === "Enter" && router.push(`/result/${lastResult.id}`)}
-              aria-label="View last result"
-            >
-              <Image
-                src={lastResult.resultImageUrl}
-                alt="Your previous outfit result"
-                fill
-                className="object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-              <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
-                <div>
-                  <span className="text-xs text-white/70">First Date challenge</span>
-                  <p className="text-sm font-bold text-white">{lastResult.verdict}</p>
-                </div>
-                <span
-                  className={`rounded-xl px-2 py-1 text-xs font-black ${
-                    lastResult.decision === "wear"
-                      ? "bg-primary text-white"
-                      : "bg-accent text-white"
-                  }`}
-                >
-                  {lastResult.decision === "wear" ? "WORE IT" : "DARED"}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
 
         <div className="pb-6" />
       </div>
