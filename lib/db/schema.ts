@@ -35,6 +35,8 @@ export const tryOns = pgTable(
     provider: tryOnProviderEnum("provider").default("mock").notNull(),
     providerTaskId: text("provider_task_id").unique(),
     resultImageUrl: text("result_image_url").default("").notNull(),
+    resultStoragePath: text("result_storage_path"),
+    providerResultUrl: text("provider_result_url"),
     errorMessage: text("error_message"),
     verdict: text("verdict").notNull(),
     decision: tryOnDecisionEnum("decision"),

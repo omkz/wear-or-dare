@@ -13,6 +13,8 @@ function toTryOn(row: TryOnRow): TryOn {
     sourceImageUrl: row.sourceImageUrl,
     sourceUploadId: row.sourceUploadId,
     resultImageUrl: row.resultImageUrl,
+    resultStoragePath: row.resultStoragePath,
+    providerResultUrl: row.providerResultUrl,
     status: row.status,
     provider: row.provider,
     providerTaskId: row.providerTaskId,
@@ -49,6 +51,8 @@ export async function insertTryOn(tryOn: TryOn) {
       provider: tryOn.provider,
       providerTaskId: tryOn.providerTaskId,
       resultImageUrl: tryOn.resultImageUrl,
+      resultStoragePath: tryOn.resultStoragePath,
+      providerResultUrl: tryOn.providerResultUrl,
       errorMessage: tryOn.errorMessage,
       verdict: tryOn.verdict,
       decision: tryOn.decision,
@@ -100,6 +104,8 @@ export async function updateYouCamTryOnState(
   update: {
     status: TryOn["status"]
     resultImageUrl?: string
+    resultStoragePath?: string | null
+    providerResultUrl?: string | null
     errorMessage?: string | null
     completedAt?: Date | null
   }
@@ -110,6 +116,12 @@ export async function updateYouCamTryOnState(
       status: update.status,
       ...(update.resultImageUrl !== undefined
         ? { resultImageUrl: update.resultImageUrl }
+        : {}),
+      ...(update.resultStoragePath !== undefined
+        ? { resultStoragePath: update.resultStoragePath }
+        : {}),
+      ...(update.providerResultUrl !== undefined
+        ? { providerResultUrl: update.providerResultUrl }
         : {}),
       ...(update.errorMessage !== undefined
         ? { errorMessage: update.errorMessage }

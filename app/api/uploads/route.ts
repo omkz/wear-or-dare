@@ -1,17 +1,11 @@
-import { randomUUID } from "node:crypto"
-import { mkdir, writeFile } from "node:fs/promises"
 import { NextRequest, NextResponse } from "next/server"
 import type { ApiErrorResponse, UploadPhotoResponse } from "@/lib/api-contracts"
 import {
-  getUploadDirectory,
-  getUploadExtension,
-  getUploadImageUrl,
-  getUploadStoragePath,
   hasValidImageSignature,
   isAcceptedImageMimeType,
   MAX_UPLOAD_SIZE,
-  resolveUploadPath,
 } from "@/lib/server/local-upload-storage"
+import { localStorageService } from "@/lib/server/storage"
 
 export const runtime = "nodejs"
 
@@ -41,23 +35,23 @@ export async function POST(request: NextRequest) {
     return errorResponse("The file content does not match its image type", 400)
   }
 
-  const uploadId = randomUUID()
-  const filename = `${uploadId}.${getUploadExtension(file.type)}`
-  const absolutePath = resolveUploadPath(filename)
-  if (!absolutePath) return errorResponse("Unable to create a safe upload path", 500)
-
+  let storedFile
   try {
-    await mkdir(getUploadDirectory(), { recursive: true })
-    await writeFile(absolutePath, bytes, { flag: "wx" })
+    storedFile = await localStorageService.saveFile({
+      bucket: "uploads",
+      bytes,
+      contentType: file.type,
+      maxBytes: MAX_UPLOAD_SIZE,
+    })
   } catch {
     return errorResponse("Upload failed. Please try again", 500)
   }
 
   const response: UploadPhotoResponse = {
     success: true,
-    uploadId,
-    imageUrl: getUploadImageUrl(filename),
-    storagePath: getUploadStoragePath(filename),
+    uploadId: storedFile.id,
+    imageUrl: storedFile.publicUrl,
+    storagePath: storedFile.storagePath,
   }
 
   return NextResponse.json(response, { status: 201 })

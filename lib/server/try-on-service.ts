@@ -15,8 +15,10 @@ import {
   type YouCamTaskStatus,
 } from "@/lib/server/youcam-client"
 import { updateYouCamTryOnState } from "@/lib/server/try-on-repository"
+import { localStorageService } from "@/lib/server/storage"
 
 const MAX_YOUCAM_IMAGE_SIZE = 10 * 1024 * 1024
+const MAX_YOUCAM_RESULT_SIZE = 15 * 1024 * 1024
 const SAFE_FAILED_TASK_MESSAGE = "The virtual try-on could not be completed. Please try again."
 const SAFE_MISSING_TASK_MESSAGE = "The virtual try-on task is unavailable. Please try again."
 
@@ -81,7 +83,11 @@ function mapYouCamStatus(status: YouCamTaskStatus): TryOn["status"] {
 }
 
 export async function synchronizeYouCamTryOn(tryOn: TryOn) {
-  if (tryOn.provider !== "youcam" || tryOn.status === "completed" || tryOn.status === "failed") {
+  if (
+    tryOn.provider !== "youcam" ||
+    tryOn.status === "completed" ||
+    tryOn.status === "failed"
+  ) {
     return tryOn
   }
 
@@ -93,30 +99,75 @@ export async function synchronizeYouCamTryOn(tryOn: TryOn) {
     })
   }
 
-  const providerResult = await getClothesTaskStatus(tryOn.providerTaskId)
-  const status = mapYouCamStatus(providerResult.status)
-
-  if (status === "completed") {
+  if (tryOn.resultStoragePath && tryOn.resultImageUrl) {
     return updateYouCamTryOnState(tryOn.id, {
-      status,
-      resultImageUrl: providerResult.resultUrl ?? "",
+      status: "completed",
+      errorMessage: null,
+      completedAt: tryOn.completedAt ? new Date(tryOn.completedAt) : new Date(),
+    })
+  }
+
+  let providerResultUrl = tryOn.providerResultUrl
+  if (!providerResultUrl) {
+    const providerResult = await getClothesTaskStatus(tryOn.providerTaskId)
+    const status = mapYouCamStatus(providerResult.status)
+
+    if (status === "failed") {
+      return updateYouCamTryOnState(tryOn.id, {
+        status,
+        errorMessage: SAFE_FAILED_TASK_MESSAGE,
+        completedAt: new Date(),
+      })
+    }
+
+    if (status !== "completed") {
+      if (status === tryOn.status) return tryOn
+      return updateYouCamTryOnState(tryOn.id, {
+        status,
+        errorMessage: null,
+        completedAt: null,
+      })
+    }
+
+    providerResultUrl = providerResult.resultUrl
+    if (!providerResultUrl) {
+      return updateYouCamTryOnState(tryOn.id, {
+        status: "failed",
+        errorMessage: SAFE_FAILED_TASK_MESSAGE,
+        completedAt: new Date(),
+      })
+    }
+
+    const savedProviderResult = await updateYouCamTryOnState(tryOn.id, {
+      status: "processing",
+      providerResultUrl,
+      errorMessage: null,
+      completedAt: null,
+    })
+    if (!savedProviderResult) return null
+  }
+
+  const storedResult = await localStorageService.saveRemoteImage({
+    bucket: "results",
+    url: providerResultUrl,
+    maxBytes: MAX_YOUCAM_RESULT_SIZE,
+  })
+
+  try {
+    const updated = await updateYouCamTryOnState(tryOn.id, {
+      status: "completed",
+      resultImageUrl: storedResult.publicUrl,
+      resultStoragePath: storedResult.storagePath,
+      providerResultUrl,
       errorMessage: null,
       completedAt: new Date(),
     })
+    if (!updated) {
+      await localStorageService.deleteFile("results", storedResult.filename)
+    }
+    return updated
+  } catch (error) {
+    await localStorageService.deleteFile("results", storedResult.filename)
+    throw error
   }
-
-  if (status === "failed") {
-    return updateYouCamTryOnState(tryOn.id, {
-      status,
-      errorMessage: SAFE_FAILED_TASK_MESSAGE,
-      completedAt: new Date(),
-    })
-  }
-
-  if (status === tryOn.status) return tryOn
-  return updateYouCamTryOnState(tryOn.id, {
-    status,
-    errorMessage: null,
-    completedAt: null,
-  })
 }

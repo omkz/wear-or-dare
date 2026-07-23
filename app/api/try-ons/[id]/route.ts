@@ -7,6 +7,7 @@ import {
   refreshMockTryOn,
 } from "@/lib/server/try-on-repository"
 import { YouCamApiError } from "@/lib/server/youcam-client"
+import { StorageError } from "@/lib/server/storage"
 
 function errorResponse(error: string, status: number) {
   const response: ApiErrorResponse = { success: false, error }
@@ -40,6 +41,9 @@ export async function GET(
     if (error instanceof YouCamApiError) {
       const status = error.message === "YOUCAM_API_KEY is required" ? 503 : 502
       return errorResponse("The virtual try-on provider is temporarily unavailable", status)
+    }
+    if (error instanceof StorageError) {
+      return errorResponse("The generated image could not be stored. Please try again", 502)
     }
     return errorResponse("Unable to load try-on", 500)
   }

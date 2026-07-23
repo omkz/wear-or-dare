@@ -141,6 +141,8 @@ function buildTryOn(id: string, payload: TryOnTokenPayload, now: number): TryOn 
     sourceImageUrl: "",
     sourceUploadId: null,
     resultImageUrl: status === "completed" ? resultImages[payload.r] : "",
+    resultStoragePath: null,
+    providerResultUrl: null,
     status,
     provider: "mock",
     providerTaskId: null,

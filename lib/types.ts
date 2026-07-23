@@ -38,6 +38,8 @@ export interface TryOn {
   sourceImageUrl: string
   sourceUploadId: string | null
   resultImageUrl: string
+  resultStoragePath: string | null
+  providerResultUrl: string | null
   status: TryOnStatus
   provider: TryOnProvider
   providerTaskId: string | null

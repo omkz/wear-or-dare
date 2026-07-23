@@ -5,7 +5,7 @@ import { localStorageService } from "@/lib/server/storage"
 export const runtime = "nodejs"
 
 function notFoundResponse() {
-  const response: ApiErrorResponse = { success: false, error: "Upload not found" }
+  const response: ApiErrorResponse = { success: false, error: "Result image not found" }
   return NextResponse.json(response, { status: 404 })
 }
 
@@ -14,7 +14,7 @@ export async function GET(
   { params }: { params: Promise<{ filename: string }> }
 ) {
   const { filename } = await params
-  const file = await localStorageService.readFile("uploads", filename)
+  const file = await localStorageService.readFile("results", filename)
   if (!file) return notFoundResponse()
 
   return new Response(file.bytes, {

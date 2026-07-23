@@ -82,6 +82,8 @@ export async function POST(request: NextRequest) {
     provider,
     providerTaskId,
     resultImageUrl: "",
+    resultStoragePath: null,
+    providerResultUrl: null,
     errorMessage: null,
     startedAt: new Date().toISOString(),
     completedAt: null,
