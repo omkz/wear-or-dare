@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
-import { X, RefreshCw } from "lucide-react"
+import { X, RefreshCw, Camera, Dices } from "lucide-react"
 import type { ApiErrorResponse, GetTryOnResponse } from "@/lib/api-contracts"
 import { loadingMessages } from "@/lib/mock-data"
 import type { TryOnStatus } from "@/lib/types"
@@ -149,6 +149,11 @@ function GeneratingContent() {
     router.push("/play")
   }
 
+  const handleUploadAnotherPhoto = () => {
+    stopPollingRef.current()
+    router.push("/photo")
+  }
+
   if (!tryOnId) {
     return <div className="min-h-screen bg-background" />
   }
@@ -164,13 +169,29 @@ function GeneratingContent() {
           <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
             {errorMessage}
           </p>
-          <button
-            onClick={retryPolling}
-            className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-base font-bold text-primary-foreground shadow-lg transition-all active:scale-95"
-          >
-            <RefreshCw className="h-5 w-5" aria-hidden="true" />
-            Try Again
-          </button>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={retryPolling}
+              className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-base font-bold text-primary-foreground shadow-lg transition-all active:scale-95"
+            >
+              <RefreshCw className="h-5 w-5" aria-hidden="true" />
+              Retry Polling
+            </button>
+            <button
+              onClick={handleCancel}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border-2 border-border bg-card text-sm font-semibold text-foreground transition-all active:scale-95"
+            >
+              <Dices className="h-4 w-4" aria-hidden="true" />
+              Start a New Try-On
+            </button>
+            <button
+              onClick={handleUploadAnotherPhoto}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-sm font-semibold text-muted-foreground transition-all active:scale-95"
+            >
+              <Camera className="h-4 w-4" aria-hidden="true" />
+              Upload Another Photo
+            </button>
+          </div>
         </div>
       </div>
     )

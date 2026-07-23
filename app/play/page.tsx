@@ -83,12 +83,17 @@ export default function PlayPage() {
       const data: CreateTryOnResponse | ApiErrorResponse = await response.json()
 
       if (!response.ok || !data.success) {
-        throw new Error(data.success ? "Could not create your try-on." : data.error)
+        setCreationError(
+          data.success ? "We couldn’t start your try-on. Please try again." : data.error
+        )
+        return
       }
 
       router.push(`/generating?id=${encodeURIComponent(data.tryOn.id)}`)
     } catch {
-      setCreationError("We couldn’t start your try-on. Please try again.")
+      setCreationError(
+        "We couldn’t reach the server. Check your connection and try again."
+      )
     } finally {
       creationInFlightRef.current = false
       setIsCreating(false)

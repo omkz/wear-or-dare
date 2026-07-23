@@ -10,14 +10,29 @@ import {
 import { createYouCamProviderTask } from "@/lib/server/try-on-service"
 import {
   getTryOnProvider,
-  TryOnProviderConfigurationError,
 } from "@/lib/server/try-on-provider"
 import { insertTryOn } from "@/lib/server/try-on-repository"
-import { YouCamApiError } from "@/lib/server/youcam-client"
+import { getSafeTryOnCreateError } from "@/lib/server/try-on-error-response"
 
 function errorResponse(error: string, status: number) {
   const response: ApiErrorResponse = { success: false, error }
   return NextResponse.json(response, { status })
+}
+
+function logCreateError(
+  stage: string,
+  error: unknown,
+  context: {
+    challengeId?: string
+    garmentId?: string
+    provider?: string
+  } = {}
+) {
+  console.error("[api/try-ons] Failed to create try-on", {
+    stage,
+    ...context,
+    error,
+  })
 }
 
 export async function POST(request: NextRequest) {
@@ -46,31 +61,48 @@ export async function POST(request: NextRequest) {
   if (!baseTryOn) return errorResponse("Unable to create try-on", 400)
 
   const garment = getServerGarment(baseTryOn.garmentId)
-  if (!garment) return errorResponse("Selected garment is unavailable", 400)
+  if (!garment) {
+    logCreateError("resolve-garment", new Error("Garment configuration not found"), {
+      challengeId,
+      garmentId: baseTryOn.garmentId,
+    })
+    return errorResponse(
+      "The selected garment image is unavailable. Choose another look and try again.",
+      422
+    )
+  }
 
   let provider
   try {
     provider = getTryOnProvider()
   } catch (error) {
-    if (error instanceof TryOnProviderConfigurationError) {
-      return errorResponse("Try-on provider is not configured", 500)
-    }
-    return errorResponse("Unable to configure try-on provider", 500)
+    logCreateError("configure-provider", error, {
+      challengeId,
+      garmentId: garment.id,
+    })
+    const safeError = getSafeTryOnCreateError(error)
+    return errorResponse(safeError.message, safeError.status)
   }
 
   let providerTaskId: string | null = null
   if (provider === "youcam") {
     if (sourceUpload.contentType === "image/webp") {
-      return errorResponse("YouCam requires a JPEG or PNG source photo", 400)
+      return errorResponse(
+        "This provider supports JPEG or PNG photos only. Upload another photo and try again.",
+        400
+      )
     }
 
     try {
       providerTaskId = await createYouCamProviderTask(sourceUpload, garment)
     } catch (error) {
-      if (error instanceof YouCamApiError && error.message === "YOUCAM_API_KEY is required") {
-        return errorResponse("Try-on provider is not configured", 503)
-      }
-      return errorResponse("The virtual try-on provider could not start this request", 502)
+      logCreateError("create-provider-task", error, {
+        challengeId,
+        garmentId: garment.id,
+        provider,
+      })
+      const safeError = getSafeTryOnCreateError(error)
+      return errorResponse(safeError.message, safeError.status)
     }
   }
 
@@ -91,8 +123,13 @@ export async function POST(request: NextRequest) {
 
   try {
     await insertTryOn(tryOn)
-  } catch {
-    return errorResponse("Unable to save try-on", 500)
+  } catch (error) {
+    logCreateError("save-database-record", error, {
+      challengeId,
+      garmentId: garment.id,
+      provider,
+    })
+    return errorResponse("We couldn’t save the try-on. Please try again.", 500)
   }
 
   const response: CreateTryOnResponse = { success: true, tryOn }
