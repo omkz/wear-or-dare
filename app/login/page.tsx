@@ -1,7 +1,16 @@
 "use client"
 
-import { useState } from "react"
+import { Suspense, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { authClient } from "@/lib/client/auth-client"
+
+const DEFAULT_RETURN_TO = "/profile"
+const ALLOWED_RETURN_PATHS = new Set(["/profile", "/play"])
+const SIGN_IN_ERROR_MESSAGE = "Couldn't start Google sign-in. Please try again."
+
+function getSafeReturnTo(value: string | null) {
+  return value && ALLOWED_RETURN_PATHS.has(value) ? value : DEFAULT_RETURN_TO
+}
 
 function GoogleIcon() {
   return (
@@ -26,9 +35,9 @@ function GoogleIcon() {
   )
 }
 
-const SIGN_IN_ERROR_MESSAGE = "Couldn't start Google sign-in. Please try again."
-
-export default function LoginPage() {
+function LoginForm() {
+  const searchParams = useSearchParams()
+  const returnTo = getSafeReturnTo(searchParams.get("returnTo"))
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -39,7 +48,7 @@ export default function LoginPage() {
     try {
       const { error: signInError } = await authClient.signIn.social({
         provider: "google",
-        callbackURL: "/profile",
+        callbackURL: returnTo,
       })
 
       if (signInError) {
@@ -82,5 +91,13 @@ export default function LoginPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <LoginForm />
+    </Suspense>
   )
 }

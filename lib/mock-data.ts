@@ -196,6 +196,7 @@ export const mockTryOns: TryOn[] = [
   {
     id: "tryon-001",
     sessionId: "session-001",
+    userId: null,
     challengeId: "ch-001",
     garmentId: "g-001",
     sourceImageUrl: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=400&h=600&fit=crop",
@@ -216,6 +217,7 @@ export const mockTryOns: TryOn[] = [
   {
     id: "tryon-002",
     sessionId: "session-001",
+    userId: null,
     challengeId: "ch-003",
     garmentId: "g-002",
     sourceImageUrl: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=400&h=600&fit=crop",
@@ -236,6 +238,7 @@ export const mockTryOns: TryOn[] = [
   {
     id: "tryon-003",
     sessionId: "session-001",
+    userId: null,
     challengeId: "ch-006",
     garmentId: "g-005",
     sourceImageUrl: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=400&h=600&fit=crop",

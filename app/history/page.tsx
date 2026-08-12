@@ -9,6 +9,7 @@ import {
   ChevronRight,
   Clock3,
   History as HistoryIcon,
+  LogIn,
   RefreshCw,
 } from "lucide-react"
 import { AppShell } from "@/components/app-shell"
@@ -16,7 +17,7 @@ import type {
   ApiErrorResponse,
   GetTryOnHistoryResponse,
 } from "@/lib/api-contracts"
-import { getAnonymousSessionId } from "@/lib/client/anonymous-session"
+import { authClient } from "@/lib/client/auth-client"
 import { mockChallenges, mockGarments } from "@/lib/mock-data"
 import type { TryOn } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -55,12 +56,18 @@ function formatCreationDate(createdAt: string) {
 
 export default function HistoryPage() {
   const router = useRouter()
+  const { data: session, isPending: isSessionPending } = authClient.useSession()
   const [tryOns, setTryOns] = useState<TryOn[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [unauthorized, setUnauthorized] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
 
+  const needsAuth = (!isSessionPending && !session) || unauthorized
+
   useEffect(() => {
+    if (isSessionPending || !session) return
+
     const controller = new AbortController()
     let active = true
 
@@ -69,16 +76,17 @@ export default function HistoryPage() {
       setError(null)
 
       try {
-        const sessionId = getAnonymousSessionId()
-        const response = await fetch(
-          `/api/try-ons/history?sessionId=${encodeURIComponent(sessionId)}`,
-          {
-            signal: controller.signal,
-            cache: "no-store",
-          }
-        )
+        const response = await fetch("/api/try-ons/history", {
+          signal: controller.signal,
+          cache: "no-store",
+        })
         const data: GetTryOnHistoryResponse | ApiErrorResponse = await response.json()
         if (!active) return
+
+        if (response.status === 401) {
+          setUnauthorized(true)
+          return
+        }
 
         if (!response.ok || !data.success) {
           setError(data.success ? "Unable to load try-on history." : data.error)
@@ -104,7 +112,7 @@ export default function HistoryPage() {
       active = false
       controller.abort()
     }
-  }, [reloadKey])
+  }, [isSessionPending, session, reloadKey])
 
   const openTryOn = (tryOn: TryOn) => {
     if (tryOn.status === "completed") {
@@ -135,12 +143,12 @@ export default function HistoryPage() {
               Try-on History
             </h1>
             <p className="text-xs text-muted-foreground">
-              Looks created in this browser tab
+              Looks created with your account
             </p>
           </div>
         </header>
 
-        {isLoading ? (
+        {isSessionPending || (session && isLoading) ? (
           <div className="space-y-3 px-5" aria-label="Loading try-on history">
             {[0, 1, 2].map((item) => (
               <div
@@ -155,6 +163,22 @@ export default function HistoryPage() {
                 </div>
               </div>
             ))}
+          </div>
+        ) : needsAuth ? (
+          <div className="flex flex-col items-center px-5 py-16 text-center">
+            <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-3xl bg-secondary">
+              <LogIn className="h-10 w-10 text-muted-foreground/40" aria-hidden="true" />
+            </div>
+            <h2 className="mb-2 text-lg font-bold">Sign in to view your history</h2>
+            <p className="mb-6 max-w-xs text-sm leading-relaxed text-muted-foreground">
+              Your try-on history is tied to your account. Sign in to see looks you&apos;ve created.
+            </p>
+            <button
+              onClick={() => router.push("/login")}
+              className="flex h-12 items-center rounded-2xl bg-primary px-6 text-sm font-bold text-primary-foreground shadow-lg transition-all active:scale-95"
+            >
+              Sign in
+            </button>
           </div>
         ) : error ? (
           <div className="flex flex-col items-center px-5 py-16 text-center">

@@ -33,6 +33,7 @@ export interface Garment {
 export interface TryOn {
   id: string
   sessionId: string
+  userId: string | null
   challengeId: string
   garmentId: string
   sourceImageUrl: string

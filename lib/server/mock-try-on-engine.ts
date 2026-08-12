@@ -127,6 +127,7 @@ function buildTryOn(id: string, payload: TryOnTokenPayload, now: number): TryOn 
   return {
     id,
     sessionId: payload.s,
+    userId: null,
     challengeId: payload.c,
     garmentId: payload.g,
     sourceImageUrl: "",

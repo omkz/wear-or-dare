@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { mockTryOns } from "@/lib/mock-data"
 import type { ApiErrorResponse, GetTryOnResponse } from "@/lib/api-contracts"
+import { auth } from "@/lib/server/auth"
 import { synchronizeYouCamTryOn } from "@/lib/server/try-on-service"
 import {
   findTryOn,
@@ -15,20 +15,19 @@ function errorResponse(error: string, status: number) {
 }
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
 
-  const existing = mockTryOns.find((tryOn) => tryOn.id === id)
-  if (existing) {
-    const response: GetTryOnResponse = { success: true, tryOn: existing }
-    return NextResponse.json(response)
-  }
+  const session = await auth.api.getSession({ headers: request.headers })
+  if (!session) return errorResponse("Authentication required", 401)
 
   try {
     const current = await findTryOn(id)
-    if (!current) return errorResponse("Try-on not found", 404)
+    if (!current || current.userId !== session.user.id) {
+      return errorResponse("Try-on not found", 404)
+    }
 
     const tryOn = current.provider === "youcam"
       ? await synchronizeYouCamTryOn(current)

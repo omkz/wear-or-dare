@@ -1,4 +1,5 @@
 import { index, pgEnum, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core"
+import { user } from "@/lib/db/auth-schema"
 
 export const tryOnStatusEnum = pgEnum("try_on_status", [
   "pending",
@@ -28,6 +29,7 @@ export const tryOns = pgTable(
     sessionId: varchar("session_id", { length: 160 })
       .notNull()
       .references(() => sessions.id, { onDelete: "cascade" }),
+    userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
     challengeId: varchar("challenge_id", { length: 32 }).notNull(),
     garmentId: varchar("garment_id", { length: 32 }).notNull(),
     sourceImageUrl: text("source_image_url").default("").notNull(),
@@ -54,6 +56,7 @@ export const tryOns = pgTable(
     index("try_ons_session_id_idx").on(table.sessionId),
     index("try_ons_status_idx").on(table.status),
     index("try_ons_provider_idx").on(table.provider),
+    index("try_ons_user_id_idx").on(table.userId),
   ]
 )
 

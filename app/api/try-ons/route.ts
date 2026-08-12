@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import type { ApiErrorResponse, CreateTryOnRequest, CreateTryOnResponse } from "@/lib/api-contracts"
+import { auth } from "@/lib/server/auth"
 import { getServerGarment } from "@/lib/server/garment-catalog"
 import { readUploadById } from "@/lib/server/local-upload-storage"
 import {
@@ -46,8 +47,9 @@ function isValidRequestId(requestId: string) {
   )
 }
 
-function matchesCreateRequest(tryOn: TryOn, requestBody: CreateTryOnRequest) {
+function matchesCreateRequest(tryOn: TryOn, requestBody: CreateTryOnRequest, userId: string) {
   return (
+    tryOn.userId === userId &&
     tryOn.sessionId === requestBody.sessionId &&
     tryOn.challengeId === requestBody.challengeId &&
     tryOn.sourceUploadId === requestBody.sourceUploadId
@@ -60,6 +62,9 @@ function successResponse(tryOn: TryOn, status: 200 | 201) {
 }
 
 export async function POST(request: NextRequest) {
+  const session = await auth.api.getSession({ headers: request.headers })
+  if (!session) return errorResponse("Authentication required", 401)
+
   const body: unknown = await request.json().catch(() => null)
 
   if (!body || typeof body !== "object" || Array.isArray(body)) {
@@ -90,7 +95,7 @@ export async function POST(request: NextRequest) {
   try {
     const existing = await findTryOnByRequestId(requestId)
     if (existing) {
-      if (!matchesCreateRequest(existing, requestBody)) {
+      if (!matchesCreateRequest(existing, requestBody, session.user.id)) {
         return errorResponse("Request ID is already in use", 409)
       }
       return successResponse(existing, 200)
@@ -139,6 +144,7 @@ export async function POST(request: NextRequest) {
 
   const initialTryOn: TryOn = {
     ...baseTryOn,
+    userId: session.user.id,
     sourceImageUrl: sourceUpload.imageUrl,
     sourceUploadId: sourceUpload.uploadId,
     status: "pending",
@@ -155,7 +161,7 @@ export async function POST(request: NextRequest) {
   let claimedTryOn: TryOn
   try {
     const claim = await claimTryOnRequest(requestId, initialTryOn)
-    if (!matchesCreateRequest(claim.tryOn, requestBody)) {
+    if (!matchesCreateRequest(claim.tryOn, requestBody, session.user.id)) {
       return errorResponse("Request ID is already in use", 409)
     }
     if (!claim.created) {

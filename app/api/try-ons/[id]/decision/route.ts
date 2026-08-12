@@ -4,6 +4,7 @@ import type {
   UpdateTryOnDecisionRequest,
   UpdateTryOnDecisionResponse,
 } from "@/lib/api-contracts"
+import { auth } from "@/lib/server/auth"
 import { updateTryOnDecision } from "@/lib/server/try-on-repository"
 
 export async function POST(
@@ -11,6 +12,13 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
+
+  const session = await auth.api.getSession({ headers: request.headers })
+  if (!session) {
+    const response: ApiErrorResponse = { success: false, error: "Authentication required" }
+    return NextResponse.json(response, { status: 401 })
+  }
+
   const body: unknown = await request.json().catch(() => null)
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     const response: ApiErrorResponse = { success: false, error: "Malformed request body" }
@@ -26,7 +34,7 @@ export async function POST(
 
   const requestBody: UpdateTryOnDecisionRequest = { decision }
   try {
-    const tryOn = await updateTryOnDecision(id, requestBody.decision)
+    const tryOn = await updateTryOnDecision(id, requestBody.decision, session.user.id)
     if (!tryOn) {
       const response: ApiErrorResponse = { success: false, error: "Try-on not found" }
       return NextResponse.json(response, { status: 404 })

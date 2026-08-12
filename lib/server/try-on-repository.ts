@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm"
+import { and, desc, eq } from "drizzle-orm"
 import { getDatabase } from "@/lib/db"
 import { sessions, tryOns, type TryOnRow } from "@/lib/db/schema"
 import { reconstructMockTryOn } from "@/lib/server/mock-try-on-engine"
@@ -8,6 +8,7 @@ function toTryOn(row: TryOnRow): TryOn {
   return {
     id: row.id,
     sessionId: row.sessionId,
+    userId: row.userId,
     challengeId: row.challengeId,
     garmentId: row.garmentId,
     sourceImageUrl: row.sourceImageUrl,
@@ -54,6 +55,7 @@ export async function claimTryOnRequest(
         id: tryOn.id,
         requestId,
         sessionId: tryOn.sessionId,
+        userId: tryOn.userId,
         challengeId: tryOn.challengeId,
         garmentId: tryOn.garmentId,
         sourceImageUrl: tryOn.sourceImageUrl,
@@ -107,11 +109,11 @@ export async function findTryOnByRequestId(requestId: string) {
   return row ? toTryOn(row) : null
 }
 
-export async function listTryOnsBySessionId(sessionId: string) {
+export async function listTryOnsByUserId(userId: string) {
   const rows = await getDatabase()
     .select()
     .from(tryOns)
-    .where(eq(tryOns.sessionId, sessionId))
+    .where(eq(tryOns.userId, userId))
     .orderBy(desc(tryOns.createdAt))
 
   return rows.map(toTryOn)
@@ -190,11 +192,15 @@ export async function updateYouCamTryOnState(
   return updated ? toTryOn(updated) : null
 }
 
-export async function updateTryOnDecision(id: string, decision: "wear" | "dare") {
+export async function updateTryOnDecision(
+  id: string,
+  decision: "wear" | "dare",
+  userId: string
+) {
   const [updated] = await getDatabase()
     .update(tryOns)
     .set({ decision, updatedAt: new Date() })
-    .where(eq(tryOns.id, id))
+    .where(and(eq(tryOns.id, id), eq(tryOns.userId, userId)))
     .returning()
 
   return updated ? toTryOn(updated) : null
