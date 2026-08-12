@@ -29,7 +29,9 @@ export const tryOns = pgTable(
     sessionId: varchar("session_id", { length: 160 })
       .notNull()
       .references(() => sessions.id, { onDelete: "cascade" }),
-    userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
     challengeId: varchar("challenge_id", { length: 32 }).notNull(),
     garmentId: varchar("garment_id", { length: 32 }).notNull(),
     sourceImageUrl: text("source_image_url").default("").notNull(),

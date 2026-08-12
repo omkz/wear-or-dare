@@ -50,6 +50,13 @@
       "when": 1786504382281,
       "tag": "0006_nebulous_king_cobra",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1786568590550,
+      "tag": "0007_grey_madripoor",
+      "breakpoints": true
     }
   ]
 }

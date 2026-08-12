@@ -127,7 +127,11 @@ function buildTryOn(id: string, payload: TryOnTokenPayload, now: number): TryOn 
   return {
     id,
     sessionId: payload.s,
-    userId: null,
+    // Reconstructed from the opaque mock token, which doesn't encode the
+    // owner. Callers either overwrite this with the real session user
+    // (createMockTryOn) or never read it (refreshMockTryOn only uses
+    // status/resultImageUrl/completedAt from the reconstructed value).
+    userId: "",
     challengeId: payload.c,
     garmentId: payload.g,
     sourceImageUrl: "",
