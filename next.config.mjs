@@ -10,6 +10,10 @@ const nextConfig = {
         protocol: "https",
         hostname: "yce-us.s3-accelerate.amazonaws.com",
       },
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+      },
     ],
   },
 }

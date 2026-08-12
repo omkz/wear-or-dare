@@ -26,12 +26,30 @@ function GoogleIcon() {
   )
 }
 
+const SIGN_IN_ERROR_MESSAGE = "Couldn't start Google sign-in. Please try again."
+
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   async function handleGoogleSignIn() {
     setIsLoading(true)
-    await authClient.signIn.social({ provider: "google", callbackURL: "/profile" })
+    setError(null)
+
+    try {
+      const { error: signInError } = await authClient.signIn.social({
+        provider: "google",
+        callbackURL: "/profile",
+      })
+
+      if (signInError) {
+        setError(signInError.message || SIGN_IN_ERROR_MESSAGE)
+        setIsLoading(false)
+      }
+    } catch {
+      setError(SIGN_IN_ERROR_MESSAGE)
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -56,6 +74,12 @@ export default function LoginPage() {
           <GoogleIcon />
           {isLoading ? "Redirecting…" : "Continue with Google"}
         </button>
+
+        {error && (
+          <p role="alert" className="mt-3 text-xs font-semibold text-destructive">
+            {error}
+          </p>
+        )}
       </div>
     </div>
   )

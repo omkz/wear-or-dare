@@ -5,6 +5,21 @@ import Link from "next/link"
 import { LogOut } from "lucide-react"
 import { authClient } from "@/lib/client/auth-client"
 
+const ALLOWED_AVATAR_HOSTNAME = "lh3.googleusercontent.com"
+
+function getSafeAvatarUrl(url: string | null | undefined) {
+  if (!url) return null
+
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === "https:" && parsed.hostname === ALLOWED_AVATAR_HOSTNAME
+      ? url
+      : null
+  } catch {
+    return null
+  }
+}
+
 export function AccountControl() {
   const { data: session, isPending } = authClient.useSession()
 
@@ -22,12 +37,13 @@ export function AccountControl() {
   }
 
   const { name, email, image } = session.user
+  const avatarUrl = getSafeAvatarUrl(image)
 
   return (
     <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm">
       <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl border-2 border-primary bg-primary/10">
-        {image ? (
-          <Image src={image} alt={name} fill className="object-cover" />
+        {avatarUrl ? (
+          <Image src={avatarUrl} alt={name} fill className="object-cover" />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-lg font-black text-primary">
             {name.charAt(0).toUpperCase()}
