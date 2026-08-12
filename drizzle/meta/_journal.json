@@ -36,6 +36,13 @@
       "when": 1784818845549,
       "tag": "0004_lowly_ares",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786498342363,
+      "tag": "0005_demonic_black_knight",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,7 @@
+import { AccountControl } from "@/components/account-control"
 import { AppShell } from "@/components/app-shell"
 import { mockSession, mockSavedLooks } from "@/lib/mock-data"
-import { Flame, Heart, Zap, Trophy, ChevronRight, Bell, Shield, HelpCircle, LogOut } from "lucide-react"
+import { Flame, Heart, Zap, Trophy, ChevronRight, Bell, Shield, HelpCircle } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 
@@ -33,26 +34,9 @@ export default function ProfilePage() {
           </h1>
         </header>
 
-        {/* Avatar + name area */}
+        {/* Account */}
         <div className="px-5 mb-6">
-          <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4 shadow-sm">
-            <div className="relative h-16 w-16 overflow-hidden rounded-2xl border-2 border-primary bg-primary/10">
-              <Image
-                src="https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=200&h=200&fit=crop&crop=face"
-                alt="Your profile avatar"
-                fill
-                className="object-cover"
-              />
-            </div>
-            <div>
-              <h2 className="text-lg font-black text-foreground">Fashion Rebel</h2>
-              <p className="text-xs text-muted-foreground">Playing since Jan 2025</p>
-              <div className="mt-1 flex items-center gap-1">
-                <Flame className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
-                <span className="text-xs font-bold text-accent">{mockSession.streak} day streak</span>
-              </div>
-            </div>
-          </div>
+          <AccountControl />
         </div>
 
         {/* Stats grid */}
@@ -127,14 +111,6 @@ export default function ProfilePage() {
               )
             })}
           </div>
-        </div>
-
-        {/* Log out */}
-        <div className="px-5 mb-2">
-          <button className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-border bg-card text-sm font-semibold text-muted-foreground transition-all active:scale-95">
-            <LogOut className="h-4 w-4" aria-hidden="true" />
-            Sign Out
-          </button>
         </div>
 
         <p className="text-center text-xs text-muted-foreground pb-8 mt-2">
