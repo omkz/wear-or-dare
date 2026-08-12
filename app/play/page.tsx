@@ -1,18 +1,12 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { AppShell } from "@/components/app-shell"
 import { usePhotoSession } from "@/components/providers/photo-session-provider"
 import { RouletteWheel } from "@/components/roulette-wheel"
 import { authClient } from "@/lib/client/auth-client"
 import { getAnonymousSessionId } from "@/lib/client/anonymous-session"
-import {
-  clearPendingTryOn,
-  readPendingTryOn,
-  savePendingTryOn,
-  type PendingTryOnIntent,
-} from "@/lib/client/pending-try-on"
 import type {
   ApiErrorResponse,
   CreateTryOnRequest,
@@ -20,36 +14,22 @@ import type {
 } from "@/lib/api-contracts"
 import type { Challenge } from "@/lib/types"
 import {
-  mockChallenges,
   mockGarmentIdByChallenge,
   mockGarments,
 } from "@/lib/mock-data"
 import { ArrowRight, History as HistoryIcon } from "lucide-react"
 import Image from "next/image"
 
-function readInitialPendingTryOn() {
-  return typeof window === "undefined" ? null : readPendingTryOn()
-}
-
 export default function PlayPage() {
   const router = useRouter()
   const { data: session, isPending: isSessionPending } = authClient.useSession()
   const { file, previewUrl, uploadId, imageUrl, isInitialized } = usePhotoSession()
-  const [pendingIntent, setPendingIntent] = useState<PendingTryOnIntent | null>(
-    readInitialPendingTryOn
-  )
-  const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(() =>
-    pendingIntent
-      ? mockChallenges.find((item) => item.id === pendingIntent.challengeId) ?? null
-      : null
-  )
+  const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null)
   const [wheelRun, setWheelRun] = useState(0)
   const [isCreating, setIsCreating] = useState(false)
   const [creationError, setCreationError] = useState<string | null>(null)
   const creationInFlightRef = useRef(false)
-  const creationRequestIdRef = useRef<string | null>(pendingIntent?.requestId ?? null)
-
-  const effectiveUploadId = pendingIntent?.sourceUploadId ?? uploadId
+  const creationRequestIdRef = useRef<string | null>(null)
 
   const selectedGarment = selectedChallenge
     ? mockGarments.find(
@@ -58,57 +38,10 @@ export default function PlayPage() {
     : null
 
   useEffect(() => {
-    if (isInitialized && !pendingIntent && (!file || !previewUrl || !uploadId || !imageUrl)) {
+    if (isInitialized && (!file || !previewUrl || !uploadId || !imageUrl)) {
       router.replace("/photo")
     }
-  }, [file, imageUrl, isInitialized, pendingIntent, previewUrl, router, uploadId])
-
-  const submitTryOn = useCallback(
-    async (requestBody: CreateTryOnRequest) => {
-      creationInFlightRef.current = true
-      setIsCreating(true)
-      setCreationError(null)
-
-      try {
-        const response = await fetch("/api/try-ons", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(requestBody),
-        })
-        const data: CreateTryOnResponse | ApiErrorResponse = await response.json()
-
-        if (!response.ok || !data.success) {
-          setCreationError(
-            data.success ? "We couldn’t start your try-on. Please try again." : data.error
-          )
-          return
-        }
-
-        clearPendingTryOn()
-        setPendingIntent(null)
-        router.push(`/generating?id=${encodeURIComponent(data.tryOn.id)}`)
-      } catch {
-        setCreationError(
-          "We couldn’t reach the server. Check your connection and try again."
-        )
-      } finally {
-        creationInFlightRef.current = false
-        setIsCreating(false)
-      }
-    },
-    [router]
-  )
-
-  useEffect(() => {
-    if (!pendingIntent || isSessionPending || !session || creationInFlightRef.current) return
-
-    void submitTryOn({
-      requestId: pendingIntent.requestId,
-      sessionId: pendingIntent.sessionId,
-      challengeId: pendingIntent.challengeId,
-      sourceUploadId: pendingIntent.sourceUploadId,
-    })
-  }, [pendingIntent, isSessionPending, session, submitTryOn])
+  }, [file, imageUrl, isInitialized, previewUrl, router, uploadId])
 
   const handleResult = (challenge: Challenge) => {
     creationRequestIdRef.current = null
@@ -120,8 +53,6 @@ export default function PlayPage() {
     if (creationInFlightRef.current) return
 
     creationRequestIdRef.current = null
-    clearPendingTryOn()
-    setPendingIntent(null)
     setSelectedChallenge(null)
     setCreationError(null)
     setWheelRun((current) => current + 1)
@@ -131,36 +62,57 @@ export default function PlayPage() {
     if (
       !selectedChallenge ||
       !selectedGarment ||
-      !effectiveUploadId ||
+      !uploadId ||
       creationInFlightRef.current ||
       isSessionPending
     ) {
       return
     }
 
-    const requestId = creationRequestIdRef.current ?? crypto.randomUUID()
-    creationRequestIdRef.current = requestId
-    const requestBody: CreateTryOnRequest = {
-      requestId,
-      sessionId: pendingIntent?.sessionId ?? getAnonymousSessionId(),
-      challengeId: selectedChallenge.id,
-      sourceUploadId: effectiveUploadId,
-    }
-
     if (!session) {
-      savePendingTryOn(requestBody)
-      setPendingIntent(requestBody)
-      router.push("/login?returnTo=%2Fplay")
+      router.push("/login")
       return
     }
 
-    await submitTryOn(requestBody)
+    creationInFlightRef.current = true
+    setIsCreating(true)
+    setCreationError(null)
+
+    try {
+      const requestId = creationRequestIdRef.current ?? crypto.randomUUID()
+      creationRequestIdRef.current = requestId
+      const requestBody: CreateTryOnRequest = {
+        requestId,
+        sessionId: getAnonymousSessionId(),
+        challengeId: selectedChallenge.id,
+        sourceUploadId: uploadId,
+      }
+      const response = await fetch("/api/try-ons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+      })
+      const data: CreateTryOnResponse | ApiErrorResponse = await response.json()
+
+      if (!response.ok || !data.success) {
+        setCreationError(
+          data.success ? "We couldn’t start your try-on. Please try again." : data.error
+        )
+        return
+      }
+
+      router.push(`/generating?id=${encodeURIComponent(data.tryOn.id)}`)
+    } catch {
+      setCreationError(
+        "We couldn’t reach the server. Check your connection and try again."
+      )
+    } finally {
+      creationInFlightRef.current = false
+      setIsCreating(false)
+    }
   }
 
-  if (
-    !isInitialized ||
-    (!pendingIntent && (!file || !previewUrl || !uploadId || !imageUrl))
-  ) {
+  if (!isInitialized || !file || !previewUrl || !uploadId || !imageUrl) {
     return <div className="min-h-screen bg-background" />
   }
 
