@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm"
+import { and, count, countDistinct, desc, eq, sql } from "drizzle-orm"
 import { getDatabase } from "@/lib/db"
 import { tryOns, type TryOnRow } from "@/lib/db/schema"
 import { reconstructMockTryOn } from "@/lib/server/mock-try-on-engine"
@@ -105,6 +105,43 @@ export async function listTryOnsByUserId(userId: string) {
     .from(tryOns)
     .where(eq(tryOns.userId, userId))
     .orderBy(desc(tryOns.createdAt))
+
+  return rows.map(toTryOn)
+}
+
+export interface TryOnStats {
+  total: number
+  wear: number
+  dare: number
+  challengesTried: number
+}
+
+export async function getTryOnStatsByUserId(userId: string): Promise<TryOnStats> {
+  const [row] = await getDatabase()
+    .select({
+      total: count(),
+      wear: sql<number>`count(*) filter (where ${tryOns.decision} = 'wear')`.mapWith(Number),
+      dare: sql<number>`count(*) filter (where ${tryOns.decision} = 'dare')`.mapWith(Number),
+      challengesTried: countDistinct(tryOns.challengeId),
+    })
+    .from(tryOns)
+    .where(eq(tryOns.userId, userId))
+
+  return {
+    total: row?.total ?? 0,
+    wear: row?.wear ?? 0,
+    dare: row?.dare ?? 0,
+    challengesTried: row?.challengesTried ?? 0,
+  }
+}
+
+export async function listRecentWearsByUserId(userId: string, limit: number) {
+  const rows = await getDatabase()
+    .select()
+    .from(tryOns)
+    .where(and(eq(tryOns.userId, userId), eq(tryOns.decision, "wear")))
+    .orderBy(desc(tryOns.createdAt))
+    .limit(limit)
 
   return rows.map(toTryOn)
 }

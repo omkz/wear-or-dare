@@ -1,12 +1,4 @@
-import type { Challenge, Garment, TryOn, SavedLook, Battle, UserSession } from "./types"
-
-export const mockSession: UserSession = {
-  id: "session-001",
-  createdAt: "2025-01-15T10:00:00Z",
-  streak: 7,
-  totalPlays: 42,
-  savedLooks: 12,
-}
+import type { Challenge, Garment, TryOn, SavedLook, Battle } from "./types"
 
 export const mockChallenges: Challenge[] = [
   {

@@ -28,6 +28,19 @@ export interface GetTryOnHistoryResponse {
   tryOns: TryOn[]
 }
 
+export interface ProfileStats {
+  total: number
+  wear: number
+  dare: number
+  challengesTried: number
+}
+
+export interface GetProfileResponse {
+  success: true
+  stats: ProfileStats
+  recentWears: TryOn[]
+}
+
 export interface UpdateTryOnDecisionRequest {
   decision: "wear" | "dare"
 }
