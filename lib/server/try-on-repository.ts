@@ -1,13 +1,12 @@
 import { and, desc, eq } from "drizzle-orm"
 import { getDatabase } from "@/lib/db"
-import { sessions, tryOns, type TryOnRow } from "@/lib/db/schema"
+import { tryOns, type TryOnRow } from "@/lib/db/schema"
 import { reconstructMockTryOn } from "@/lib/server/mock-try-on-engine"
 import type { TryOn } from "@/lib/types"
 
 function toTryOn(row: TryOnRow): TryOn {
   return {
     id: row.id,
-    sessionId: row.sessionId,
     userId: row.userId,
     challengeId: row.challengeId,
     garmentId: row.garmentId,
@@ -41,20 +40,11 @@ export async function claimTryOnRequest(
   const now = new Date()
 
   return database.transaction(async (transaction) => {
-    await transaction
-      .insert(sessions)
-      .values({ id: tryOn.sessionId, createdAt: now, updatedAt: now })
-      .onConflictDoUpdate({
-        target: sessions.id,
-        set: { updatedAt: now },
-      })
-
     const [inserted] = await transaction
       .insert(tryOns)
       .values({
         id: tryOn.id,
         requestId,
-        sessionId: tryOn.sessionId,
         userId: tryOn.userId,
         challengeId: tryOn.challengeId,
         garmentId: tryOn.garmentId,

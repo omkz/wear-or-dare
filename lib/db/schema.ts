@@ -11,24 +11,11 @@ export const tryOnStatusEnum = pgEnum("try_on_status", [
 export const tryOnDecisionEnum = pgEnum("try_on_decision", ["wear", "dare"])
 export const tryOnProviderEnum = pgEnum("try_on_provider", ["mock", "youcam"])
 
-export const sessions = pgTable("sessions", {
-  id: varchar("id", { length: 160 }).primaryKey(),
-  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
-    .defaultNow()
-    .notNull(),
-})
-
 export const tryOns = pgTable(
   "try_ons",
   {
     id: text("id").primaryKey(),
     requestId: uuid("request_id").defaultRandom().notNull().unique(),
-    sessionId: varchar("session_id", { length: 160 })
-      .notNull()
-      .references(() => sessions.id, { onDelete: "cascade" }),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
@@ -55,7 +42,6 @@ export const tryOns = pgTable(
       .notNull(),
   },
   (table) => [
-    index("try_ons_session_id_idx").on(table.sessionId),
     index("try_ons_status_idx").on(table.status),
     index("try_ons_provider_idx").on(table.provider),
     index("try_ons_user_id_idx").on(table.userId),

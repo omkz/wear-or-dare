@@ -195,7 +195,6 @@ export const mockGarmentIdByChallenge: Readonly<Record<string, string>> = {
 export const mockTryOns: TryOn[] = [
   {
     id: "tryon-001",
-    sessionId: "session-001",
     userId: "mock-user-001",
     challengeId: "ch-001",
     garmentId: "g-001",
@@ -216,7 +215,6 @@ export const mockTryOns: TryOn[] = [
   },
   {
     id: "tryon-002",
-    sessionId: "session-001",
     userId: "mock-user-001",
     challengeId: "ch-003",
     garmentId: "g-002",
@@ -237,7 +235,6 @@ export const mockTryOns: TryOn[] = [
   },
   {
     id: "tryon-003",
-    sessionId: "session-001",
     userId: "mock-user-001",
     challengeId: "ch-006",
     garmentId: "g-005",

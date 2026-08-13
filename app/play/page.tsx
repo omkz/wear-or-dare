@@ -6,7 +6,6 @@ import { AppShell } from "@/components/app-shell"
 import { usePhotoSession } from "@/components/providers/photo-session-provider"
 import { RouletteWheel } from "@/components/roulette-wheel"
 import { authClient } from "@/lib/client/auth-client"
-import { getAnonymousSessionId } from "@/lib/client/anonymous-session"
 import type {
   ApiErrorResponse,
   CreateTryOnRequest,
@@ -83,7 +82,6 @@ export default function PlayPage() {
       creationRequestIdRef.current = requestId
       const requestBody: CreateTryOnRequest = {
         requestId,
-        sessionId: getAnonymousSessionId(),
         challengeId: selectedChallenge.id,
         sourceUploadId: uploadId,
       }

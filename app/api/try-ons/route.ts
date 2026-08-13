@@ -6,7 +6,6 @@ import { readUploadById } from "@/lib/server/local-upload-storage"
 import {
   createMockTryOn,
   isValidChallengeId,
-  isValidSessionId,
 } from "@/lib/server/mock-try-on-engine"
 import { createYouCamProviderTask } from "@/lib/server/try-on-service"
 import {
@@ -50,7 +49,6 @@ function isValidRequestId(requestId: string) {
 function matchesCreateRequest(tryOn: TryOn, requestBody: CreateTryOnRequest, userId: string) {
   return (
     tryOn.userId === userId &&
-    tryOn.sessionId === requestBody.sessionId &&
     tryOn.challengeId === requestBody.challengeId &&
     tryOn.sourceUploadId === requestBody.sourceUploadId
   )
@@ -71,12 +69,9 @@ export async function POST(request: NextRequest) {
     return errorResponse("Malformed request body", 400)
   }
 
-  const { requestId, sessionId, challengeId, sourceUploadId } = body as Record<string, unknown>
+  const { requestId, challengeId, sourceUploadId } = body as Record<string, unknown>
   if (typeof requestId !== "string" || !isValidRequestId(requestId)) {
     return errorResponse("Invalid request ID", 400)
-  }
-  if (typeof sessionId !== "string" || !isValidSessionId(sessionId)) {
-    return errorResponse("Invalid session ID", 400)
   }
   if (typeof challengeId !== "string" || !isValidChallengeId(challengeId)) {
     return errorResponse("Invalid challenge ID", 400)
@@ -87,7 +82,6 @@ export async function POST(request: NextRequest) {
 
   const requestBody: CreateTryOnRequest = {
     requestId,
-    sessionId,
     challengeId,
     sourceUploadId,
   }
@@ -108,7 +102,7 @@ export async function POST(request: NextRequest) {
   const sourceUpload = await readUploadById(sourceUploadId)
   if (!sourceUpload) return errorResponse("Uploaded source photo not found", 400)
 
-  const baseTryOn = createMockTryOn(requestBody.sessionId, requestBody.challengeId)
+  const baseTryOn = createMockTryOn(requestBody.requestId, requestBody.challengeId)
   if (!baseTryOn) return errorResponse("Unable to create try-on", 400)
 
   const garment = getServerGarment(baseTryOn.garmentId)

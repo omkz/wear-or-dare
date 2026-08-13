@@ -28,7 +28,6 @@ export type MockTryOn = Omit<TryOn, "userId">
 
 interface TryOnTokenPayload {
   v: 1
-  s: string
   c: string
   g: string
   t: number
@@ -73,7 +72,6 @@ function parsePayload(id: string, now: number): TryOnTokenPayload | null {
 
     if (
       value.v !== 1 ||
-      typeof value.s !== "string" ||
       typeof value.c !== "string" ||
       typeof value.g !== "string" ||
       typeof value.t !== "number" ||
@@ -86,7 +84,6 @@ function parsePayload(id: string, now: number): TryOnTokenPayload | null {
 
     const payload: TryOnTokenPayload = {
       v: 1,
-      s: value.s,
       c: value.c,
       g: value.g,
       t: value.t,
@@ -101,7 +98,6 @@ function parsePayload(id: string, now: number): TryOnTokenPayload | null {
 
     if (
       payload.v !== 1 ||
-      !isValidSessionId(payload.s) ||
       !challengeExists ||
       !garmentExists ||
       payload.g !== expectedGarment ||
@@ -131,7 +127,6 @@ function buildTryOn(id: string, payload: TryOnTokenPayload, now: number): MockTr
 
   return {
     id,
-    sessionId: payload.s,
     challengeId: payload.c,
     garmentId: payload.g,
     sourceImageUrl: "",
@@ -154,10 +149,6 @@ function buildTryOn(id: string, payload: TryOnTokenPayload, now: number): MockTr
   }
 }
 
-export function isValidSessionId(sessionId: string) {
-  return /^session-[A-Za-z0-9][A-Za-z0-9_-]{7,127}$/.test(sessionId)
-}
-
 export function isValidChallengeId(challengeId: string) {
   return mockChallenges.some((challenge) => challenge.id === challengeId)
 }
@@ -167,20 +158,19 @@ export function getGarmentIdForChallenge(challengeId: string) {
 }
 
 export function createMockTryOn(
-  sessionId: string,
+  requestId: string,
   challengeId: string,
   now = Date.now()
 ): MockTryOn | null {
-  if (!isValidSessionId(sessionId) || !isValidChallengeId(challengeId)) return null
+  if (!isValidChallengeId(challengeId)) return null
 
   const garmentId = mockGarmentIdByChallenge[challengeId]
   if (!garmentId) return null
 
   const nonce = randomUUID()
-  const seed = hashSeed(`${sessionId}:${challengeId}:${now}:${nonce}`)
+  const seed = hashSeed(`${requestId}:${challengeId}:${now}:${nonce}`)
   const payload: TryOnTokenPayload = {
     v: 1,
-    s: sessionId,
     c: challengeId,
     g: garmentId,
     t: now,

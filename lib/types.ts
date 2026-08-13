@@ -32,7 +32,6 @@ export interface Garment {
 
 export interface TryOn {
   id: string
-  sessionId: string
   userId: string
   challengeId: string
   garmentId: string

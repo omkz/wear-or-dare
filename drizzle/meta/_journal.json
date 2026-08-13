@@ -57,6 +57,13 @@
       "when": 1786568590550,
       "tag": "0007_grey_madripoor",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1786629321089,
+      "tag": "0008_outgoing_thunderbolt",
+      "breakpoints": true
     }
   ]
 }
