@@ -21,6 +21,11 @@ const resultImages = [
   "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600&h=900&fit=crop",
 ] as const
 
+// The opaque mock token has no notion of an authenticated owner, so
+// reconstructed/generated mock try-ons omit `userId`. Callers that persist a
+// try-on must supply the real session user's id to satisfy `TryOn`.
+export type MockTryOn = Omit<TryOn, "userId">
+
 interface TryOnTokenPayload {
   v: 1
   s: string
@@ -120,18 +125,13 @@ function parsePayload(id: string, now: number): TryOnTokenPayload | null {
   }
 }
 
-function buildTryOn(id: string, payload: TryOnTokenPayload, now: number): TryOn {
+function buildTryOn(id: string, payload: TryOnTokenPayload, now: number): MockTryOn {
   const status = getStatus(payload.t, now)
   const createdAt = new Date(payload.t).toISOString()
 
   return {
     id,
     sessionId: payload.s,
-    // Reconstructed from the opaque mock token, which doesn't encode the
-    // owner. Callers either overwrite this with the real session user
-    // (createMockTryOn) or never read it (refreshMockTryOn only uses
-    // status/resultImageUrl/completedAt from the reconstructed value).
-    userId: "",
     challengeId: payload.c,
     garmentId: payload.g,
     sourceImageUrl: "",
@@ -166,7 +166,11 @@ export function getGarmentIdForChallenge(challengeId: string) {
   return mockGarmentIdByChallenge[challengeId] ?? null
 }
 
-export function createMockTryOn(sessionId: string, challengeId: string, now = Date.now()) {
+export function createMockTryOn(
+  sessionId: string,
+  challengeId: string,
+  now = Date.now()
+): MockTryOn | null {
   if (!isValidSessionId(sessionId) || !isValidChallengeId(challengeId)) return null
 
   const garmentId = mockGarmentIdByChallenge[challengeId]
@@ -189,7 +193,7 @@ export function createMockTryOn(sessionId: string, challengeId: string, now = Da
   return buildTryOn(id, payload, now)
 }
 
-export function reconstructMockTryOn(id: string, now = Date.now()) {
+export function reconstructMockTryOn(id: string, now = Date.now()): MockTryOn | null {
   const payload = parsePayload(id, now)
   return payload ? buildTryOn(id, payload, now) : null
 }
