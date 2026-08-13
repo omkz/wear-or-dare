@@ -167,8 +167,11 @@ export function createMockTryOn(
   const garmentId = mockGarmentIdByChallenge[challengeId]
   if (!garmentId) return null
 
+  // Deterministic: same requestId + challengeId always picks the same
+  // result image and verdict. The nonce below only gives the opaque token
+  // a unique id component; it must not influence r/w.
+  const seed = hashSeed(`${requestId}:${challengeId}`)
   const nonce = randomUUID()
-  const seed = hashSeed(`${requestId}:${challengeId}:${now}:${nonce}`)
   const payload: TryOnTokenPayload = {
     v: 1,
     c: challengeId,
