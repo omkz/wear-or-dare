@@ -15,7 +15,6 @@ export interface Challenge {
   description: string
   category: "Events" | "Decades" | "Moods" | "Wildcards"
   boldness: number // 1-5
-  participationCount: number
   emoji: string
   color: string
 }

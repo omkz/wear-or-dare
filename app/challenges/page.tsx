@@ -6,7 +6,7 @@ import { AppShell } from "@/components/app-shell"
 import { BoldnessIndicator } from "@/components/boldness-indicator"
 import { challenges } from "@/lib/catalog/challenges"
 import type { Challenge } from "@/lib/types"
-import { Zap, Users, TrendingUp, Sparkles } from "lucide-react"
+import { Zap, TrendingUp, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const CATEGORIES = ["All", "Events", "Decades", "Moods", "Wildcards"] as const
@@ -22,7 +22,7 @@ export default function ChallengesPage() {
       : challenges.filter((c) => c.category === activeCategory)
 
   const featured = challenges.find((c) => c.id === "ch-006")!
-  const trending = challenges.filter((c) => c.participationCount > 20000).slice(0, 3)
+  const trending = challenges.filter((c) => c.id !== featured.id).slice(0, 3)
 
   const handleStart = (challenge: Challenge) => {
     router.push(`/generating?challenge=${challenge.id}`)
@@ -66,13 +66,7 @@ export default function ChallengesPage() {
               <p className="text-sm text-white/80 leading-relaxed mb-4 text-pretty">
                 {featured.description}
               </p>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Users className="h-3.5 w-3.5 text-white/70" aria-hidden="true" />
-                  <span className="text-xs text-white/70">
-                    {(featured.participationCount / 1000).toFixed(1)}k played
-                  </span>
-                </div>
+              <div className="flex justify-end">
                 <button
                   onClick={() => handleStart(featured)}
                   className="flex h-10 items-center gap-1.5 rounded-xl bg-white px-4 text-sm font-bold transition-all active:scale-95"
@@ -103,9 +97,6 @@ export default function ChallengesPage() {
               >
                 <span className="text-2xl" aria-hidden="true">{c.emoji}</span>
                 <p className="text-sm font-bold text-foreground leading-tight">{c.title}</p>
-                <p className="text-xs text-muted-foreground">
-                  {(c.participationCount / 1000).toFixed(1)}k plays
-                </p>
               </button>
             ))}
           </div>
@@ -163,9 +154,6 @@ export default function ChallengesPage() {
                 <div className="flex items-center justify-between mt-3">
                   <div className="flex items-center gap-3">
                     <BoldnessIndicator level={challenge.boldness} />
-                    <span className="text-xs text-muted-foreground">
-                      {(challenge.participationCount / 1000).toFixed(1)}k
-                    </span>
                   </div>
                   <button
                     onClick={() => handleStart(challenge)}
