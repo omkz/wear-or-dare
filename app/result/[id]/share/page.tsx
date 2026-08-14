@@ -1,30 +1,216 @@
 "use client"
 
+import { useEffect, useState, type ComponentType } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Image from "next/image"
-import { mockTryOns } from "@/lib/mock-data"
-import { challenges } from "@/lib/catalog/challenges"
-import { ChevronLeft, Download, Share2, Zap, ExternalLink } from "lucide-react"
+import {
+  AlertCircle,
+  ChevronLeft,
+  Download,
+  LogIn,
+  Share2,
+  Zap,
+} from "lucide-react"
+import type { ApiErrorResponse, GetTryOnResponse } from "@/lib/api-contracts"
+import { getChallengeById } from "@/lib/catalog/challenges"
+import { getGarmentById } from "@/lib/catalog/garments"
+import type { TryOn } from "@/lib/types"
+
+function slugify(value: string) {
+  const slug = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
+  return slug || "look"
+}
+
+async function fetchResultImageFile(resultImageUrl: string, fileName: string) {
+  const response = await fetch(resultImageUrl)
+  if (!response.ok) throw new Error("Unable to fetch result image")
+  const blob = await response.blob()
+  return new File([blob], fileName, { type: blob.type || "image/png" })
+}
+
+interface StatusScreenProps {
+  icon?: ComponentType<{ className?: string; "aria-hidden"?: boolean }>
+  title: string
+  message?: string
+  actionLabel: string
+  onAction: () => void
+}
+
+function StatusScreen({ icon: Icon, title, message, actionLabel, onAction }: StatusScreenProps) {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-foreground px-5 text-center">
+      <div className="max-w-sm w-full">
+        {Icon && (
+          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-3xl bg-white/10">
+            <Icon className="h-8 w-8 text-white/70" aria-hidden={true} />
+          </div>
+        )}
+        <h1 className="mb-2 text-xl font-black text-white">{title}</h1>
+        {message && <p className="mb-6 text-sm text-white/60">{message}</p>}
+        <button
+          onClick={onAction}
+          className="flex h-12 w-full items-center justify-center rounded-2xl bg-primary text-sm font-bold text-primary-foreground transition-all active:scale-95"
+        >
+          {actionLabel}
+        </button>
+      </div>
+    </div>
+  )
+}
 
 export default function SharePage() {
-  const params = useParams()
+  const params = useParams<{ id: string }>()
   const router = useRouter()
-  const id = params.id as string
+  const id = params.id
 
-  const tryOn = mockTryOns.find((t) => t.id === id) ?? mockTryOns[0]
-  const challenge = challenges.find((c) => c.id === tryOn.challengeId) ?? challenges[0]
+  const [tryOn, setTryOn] = useState<TryOn | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [unauthorized, setUnauthorized] = useState(false)
+  const [isSharing, setIsSharing] = useState(false)
+  const [shareError, setShareError] = useState<string | null>(null)
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [downloadError, setDownloadError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    let active = true
+
+    const loadTryOn = async () => {
+      try {
+        const response = await fetch(`/api/try-ons/${encodeURIComponent(id)}`, {
+          signal: controller.signal,
+          cache: "no-store",
+        })
+        const data: GetTryOnResponse | ApiErrorResponse = await response.json()
+        if (!active) return
+
+        if (response.status === 401) {
+          setUnauthorized(true)
+          return
+        }
+
+        if (!response.ok || !data.success) {
+          setLoadError(data.success ? "This look could not be loaded." : data.error)
+          return
+        }
+
+        if (data.tryOn.status !== "completed" || !data.tryOn.resultImageUrl) {
+          router.replace(`/generating?id=${encodeURIComponent(id)}`)
+          return
+        }
+
+        setTryOn(data.tryOn)
+      } catch (error) {
+        if (!active || (error instanceof DOMException && error.name === "AbortError")) return
+        setLoadError("We couldn’t load this look. Please try again.")
+      }
+    }
+
+    void loadTryOn()
+    return () => {
+      active = false
+      controller.abort()
+    }
+  }, [id, router])
+
+  if (unauthorized) {
+    return (
+      <StatusScreen
+        icon={LogIn}
+        title="Sign in to view this look"
+        message="This look is tied to your account. Sign in to share it."
+        actionLabel="Sign in"
+        onAction={() => router.push("/login")}
+      />
+    )
+  }
+
+  if (loadError) {
+    return (
+      <StatusScreen
+        icon={AlertCircle}
+        title="Look not found"
+        message={loadError}
+        actionLabel="Back to History"
+        onAction={() => router.push("/history")}
+      />
+    )
+  }
+
+  if (!tryOn) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-foreground">
+        <div
+          className="h-8 w-8 animate-spin rounded-full border-3 border-white/30 border-t-white"
+          aria-label="Loading look"
+        />
+      </div>
+    )
+  }
+
+  const challenge = getChallengeById(tryOn.challengeId)
+  const garment = getGarmentById(tryOn.garmentId)
+
+  if (!challenge || !garment) {
+    return (
+      <StatusScreen
+        icon={AlertCircle}
+        title="Look details unavailable"
+        actionLabel="Back to History"
+        onAction={() => router.push("/history")}
+      />
+    )
+  }
+
+  const fileName = `wear-or-dare-${slugify(challenge.title)}.png`
+  const caption = `I tried the ${challenge.title} challenge on Wear or Dare. Would you wear it or dare me to try again?`
 
   const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: "Wear or Dare",
-          text: `I took the ${challenge.title} challenge! ${tryOn.verdict} — ${tryOn.decision === "wear" ? "I wore it!" : "I dared again!"}`,
-          url: window.location.href,
-        })
-      } catch {
-        // User cancelled
+    if (isSharing) return
+    setIsSharing(true)
+    setShareError(null)
+
+    try {
+      const file = await fetchResultImageFile(tryOn.resultImageUrl, fileName)
+
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: "Wear or Dare", text: caption })
+      } else if (navigator.share) {
+        await navigator.share({ title: "Wear or Dare", text: caption })
+      } else {
+        setShareError("Sharing isn’t supported on this device. Use Download Image instead.")
       }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return
+      setShareError("We couldn’t share this look. Try downloading it instead.")
+    } finally {
+      setIsSharing(false)
+    }
+  }
+
+  const handleDownload = async () => {
+    if (isDownloading) return
+    setIsDownloading(true)
+    setDownloadError(null)
+
+    let objectUrl: string | null = null
+    try {
+      const file = await fetchResultImageFile(tryOn.resultImageUrl, fileName)
+      objectUrl = URL.createObjectURL(file)
+      const link = document.createElement("a")
+      link.href = objectUrl
+      link.download = fileName
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+    } catch {
+      setDownloadError("We couldn’t download this image. Please try again.")
+    } finally {
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+      setIsDownloading(false)
     }
   }
 
@@ -91,25 +277,36 @@ export default function SharePage() {
             {/* Bottom: Result */}
             <div className="absolute bottom-0 left-0 right-0 p-5">
               <p className="text-xs font-bold text-white/60 uppercase tracking-widest mb-1">
-                My verdict
+                Featured piece
               </p>
-              <h2
-                className="text-2xl font-black text-white leading-tight mb-3 text-balance"
-                style={{ fontFamily: "var(--font-display, sans-serif)" }}
-              >
-                {tryOn.verdict}
-              </h2>
+              <p className="text-sm font-bold text-white/90 mb-3">{garment.name}</p>
+
+              {tryOn.verdict && (
+                <>
+                  <p className="text-xs font-bold text-white/60 uppercase tracking-widest mb-1">
+                    My verdict
+                  </p>
+                  <h2
+                    className="text-2xl font-black text-white leading-tight mb-3 text-balance"
+                    style={{ fontFamily: "var(--font-display, sans-serif)" }}
+                  >
+                    {tryOn.verdict}
+                  </h2>
+                </>
+              )}
 
               {/* Decision pill */}
-              <div
-                className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 ${
-                  tryOn.decision === "wear" ? "bg-primary" : "bg-accent"
-                }`}
-              >
-                <span className="text-base font-black text-white">
-                  {tryOn.decision === "wear" ? "I chose WEAR IT" : "I chose DARE AGAIN"}
-                </span>
-              </div>
+              {tryOn.decision && (
+                <div
+                  className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 ${
+                    tryOn.decision === "wear" ? "bg-primary" : "bg-accent"
+                  }`}
+                >
+                  <span className="text-base font-black text-white">
+                    {tryOn.decision === "wear" ? "I chose WEAR IT" : "I chose DARE AGAIN"}
+                  </span>
+                </div>
+              )}
 
               {/* Tagline */}
               <p className="mt-3 text-xs text-white/50">
@@ -123,21 +320,26 @@ export default function SharePage() {
         <div className="px-5 pb-10 flex flex-col gap-3">
           <button
             onClick={handleShare}
-            className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-base font-bold text-white shadow-lg transition-all active:scale-95"
+            disabled={isSharing}
+            className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-base font-bold text-white shadow-lg transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Share2 className="h-5 w-5" aria-hidden="true" />
-            Share
+            {isSharing ? "Sharing…" : "Share"}
           </button>
-          <div className="flex gap-3">
-            <button className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/10 text-sm font-semibold text-white transition-all active:scale-95">
-              <Download className="h-4 w-4" aria-hidden="true" />
-              Save Image
-            </button>
-            <button className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/10 text-sm font-semibold text-white transition-all active:scale-95">
-              <ExternalLink className="h-4 w-4" aria-hidden="true" />
-              Story
-            </button>
-          </div>
+          <button
+            onClick={handleDownload}
+            disabled={isDownloading}
+            className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl border-2 border-white/20 bg-white/10 text-base font-bold text-white transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Download className="h-5 w-5" aria-hidden="true" />
+            {isDownloading ? "Downloading…" : "Download Image"}
+          </button>
+
+          {(shareError || downloadError) && (
+            <p className="text-center text-xs font-semibold text-white/80" role="alert">
+              {shareError || downloadError}
+            </p>
+          )}
         </div>
       </div>
     </div>
