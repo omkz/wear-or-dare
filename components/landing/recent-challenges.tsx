@@ -1,7 +1,6 @@
 import Link from "next/link"
 import { challenges } from "@/lib/catalog/challenges"
 import { BoldnessIndicator } from "@/components/boldness-indicator"
-import { Users } from "lucide-react"
 
 export function RecentChallenges() {
   const featured = challenges.slice(0, 4)
@@ -34,10 +33,6 @@ export function RecentChallenges() {
             <h3 className="font-bold text-foreground text-sm leading-tight text-balance">
               {challenge.title}
             </h3>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Users className="h-3 w-3" aria-hidden="true" />
-              <span>{(challenge.participationCount / 1000).toFixed(1)}k played</span>
-            </div>
             <BoldnessIndicator level={challenge.boldness} />
           </Link>
         ))}
