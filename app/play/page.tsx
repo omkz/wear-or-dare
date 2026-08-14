@@ -214,7 +214,7 @@ function PlayContent() {
                     {selectedGarment.name}
                   </h3>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {selectedGarment.brand} · {selectedGarment.category}
+                    {selectedGarment.category}
                   </p>
                 </div>
               </div>

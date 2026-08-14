@@ -260,7 +260,7 @@ export default function ResultPage() {
                 Featured piece
               </p>
               <p className="font-bold text-foreground mt-0.5">{garment.name}</p>
-              <p className="text-sm text-muted-foreground">{garment.brand}</p>
+              <p className="text-sm text-muted-foreground">{garment.category}</p>
             </div>
           </div>
 
