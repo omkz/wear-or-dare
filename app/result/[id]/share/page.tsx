@@ -24,11 +24,24 @@ function slugify(value: string) {
   return slug || "look"
 }
 
-async function fetchResultImageFile(resultImageUrl: string, fileName: string) {
+const MIME_EXTENSIONS: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/jpg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+}
+
+function extensionForMimeType(mimeType: string) {
+  return MIME_EXTENSIONS[mimeType.toLowerCase()] ?? "png"
+}
+
+async function fetchResultImageFile(resultImageUrl: string, baseFileName: string) {
   const response = await fetch(resultImageUrl)
   if (!response.ok) throw new Error("Unable to fetch result image")
   const blob = await response.blob()
-  return new File([blob], fileName, { type: blob.type || "image/png" })
+  const contentType = blob.type || "image/png"
+  const fileName = `${baseFileName}.${extensionForMimeType(contentType)}`
+  return new File([blob], fileName, { type: contentType })
 }
 
 interface StatusScreenProps {
@@ -165,7 +178,7 @@ export default function SharePage() {
     )
   }
 
-  const fileName = `wear-or-dare-${slugify(challenge.title)}.png`
+  const baseFileName = `wear-or-dare-${slugify(challenge.title)}`
   const caption = `I tried the ${challenge.title} challenge on Wear or Dare. Would you wear it or dare me to try again?`
 
   const handleShare = async () => {
@@ -174,7 +187,7 @@ export default function SharePage() {
     setShareError(null)
 
     try {
-      const file = await fetchResultImageFile(tryOn.resultImageUrl, fileName)
+      const file = await fetchResultImageFile(tryOn.resultImageUrl, baseFileName)
 
       if (navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file], title: "Wear or Dare", text: caption })
@@ -198,11 +211,11 @@ export default function SharePage() {
 
     let objectUrl: string | null = null
     try {
-      const file = await fetchResultImageFile(tryOn.resultImageUrl, fileName)
+      const file = await fetchResultImageFile(tryOn.resultImageUrl, baseFileName)
       objectUrl = URL.createObjectURL(file)
       const link = document.createElement("a")
       link.href = objectUrl
-      link.download = fileName
+      link.download = file.name
       document.body.appendChild(link)
       link.click()
       link.remove()
@@ -310,7 +323,7 @@ export default function SharePage() {
 
               {/* Tagline */}
               <p className="mt-3 text-xs text-white/50">
-                wearordare.app · Spin the challenge. Try the look.
+                Wear or Dare · Spin the challenge. Try the look.
               </p>
             </div>
           </div>
