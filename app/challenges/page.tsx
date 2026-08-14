@@ -6,7 +6,7 @@ import { AppShell } from "@/components/app-shell"
 import { BoldnessIndicator } from "@/components/boldness-indicator"
 import { challenges } from "@/lib/catalog/challenges"
 import type { Challenge } from "@/lib/types"
-import { Zap, TrendingUp, Sparkles } from "lucide-react"
+import { Zap, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const CATEGORIES = ["All", "Events", "Decades", "Moods", "Wildcards"] as const
@@ -22,7 +22,7 @@ export default function ChallengesPage() {
       : challenges.filter((c) => c.category === activeCategory)
 
   const featured = challenges.find((c) => c.id === "ch-006")!
-  const trending = challenges.filter((c) => c.id !== featured.id).slice(0, 3)
+  const moreDares = challenges.filter((c) => c.id !== featured.id).slice(0, 3)
 
   const handleStart = (challenge: Challenge) => {
     router.push(`/generating?challenge=${challenge.id}`)
@@ -80,16 +80,15 @@ export default function ChallengesPage() {
           </div>
         </div>
 
-        {/* Trending */}
+        {/* More Dares */}
         <div className="px-5 mb-6">
-          <div className="flex items-center gap-1.5 mb-3">
-            <TrendingUp className="h-4 w-4 text-accent" aria-hidden="true" />
+          <div className="mb-3">
             <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
-              Trending This Week
+              More Dares
             </h2>
           </div>
           <div className="flex gap-3 overflow-x-auto pb-1 no-scrollbar">
-            {trending.map((c) => (
+            {moreDares.map((c) => (
               <button
                 key={c.id}
                 onClick={() => handleStart(c)}
