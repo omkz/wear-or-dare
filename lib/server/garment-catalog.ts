@@ -23,7 +23,6 @@ export interface ServerGarment {
   display: Garment
   imageLocation: GarmentImageLocation
   youCamCategory: YouCamGarmentCategory
-  usesPlaceholderImage: boolean
 }
 
 export interface LoadedGarmentImage {
@@ -35,69 +34,50 @@ export interface LoadedGarmentImage {
 interface GarmentProviderConfiguration {
   imageLocation: GarmentImageLocation
   youCamCategory: YouCamGarmentCategory
-  /**
-   * True when this garment still falls back to the shared placeholder image
-   * rather than its own real product photo. The repo only ships one real
-   * distinct garment reference photo (now used by g-001); the rest are
-   * blocked on real assets. Tracked explicitly so the shared fallback is
-   * never mistaken for a real per-garment asset.
-   */
-  usesPlaceholderImage: boolean
 }
-
-// The only real, distinct garment reference photo currently in the repo.
-// Assigned to g-001 under its own filename below. Garments still on this
-// path (see usesPlaceholderImage) are waiting on real product photography.
-const PLACEHOLDER_IMAGE_PATH = "garments/sample-full-body.png"
 
 const garmentProviderConfiguration: Record<string, GarmentProviderConfiguration> = {
   "g-001": {
     imageLocation: {
       type: "local",
-      path: "garments/g-001-oversized-blazer.png",
+      path: "garments/g-001 Oversized Blazer.png",
     },
     youCamCategory: "upper_body",
-    usesPlaceholderImage: false,
   },
   "g-002": {
     imageLocation: {
       type: "local",
-      path: PLACEHOLDER_IMAGE_PATH,
+      path: "garments/g-002 Cargo Trousers.png",
     },
     youCamCategory: "lower_body",
-    usesPlaceholderImage: true,
   },
   "g-003": {
     imageLocation: {
       type: "local",
-      path: PLACEHOLDER_IMAGE_PATH,
+      path: "garments/g-003 Slip Dress.png",
     },
     youCamCategory: "full_body",
-    usesPlaceholderImage: true,
   },
   "g-004": {
     imageLocation: {
       type: "local",
-      path: PLACEHOLDER_IMAGE_PATH,
+      path: "garments/g-004 Leather Jacket.png",
     },
     youCamCategory: "upper_body",
-    usesPlaceholderImage: true,
   },
   "g-005": {
     imageLocation: {
       type: "local",
-      path: PLACEHOLDER_IMAGE_PATH,
+      path: "garments/g-005 Festival Set.png",
     },
     youCamCategory: "full_body",
-    usesPlaceholderImage: true,
   },
   "g-006": {
     imageLocation: {
       type: "local",
-      path: PLACEHOLDER_IMAGE_PATH,
+      path: "garments/g-006 Midi Skirt.png",
     },
     youCamCategory: "lower_body",
-    usesPlaceholderImage: true,
   },
 }
 
