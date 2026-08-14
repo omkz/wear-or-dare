@@ -2,7 +2,7 @@ import "server-only"
 import { constants } from "node:fs"
 import { open } from "node:fs/promises"
 import path from "node:path"
-import { mockGarments } from "@/lib/mock-data"
+import { getGarmentById } from "@/lib/catalog/garments"
 import type { Garment } from "@/lib/types"
 import type {
   YouCamGarmentCategory,
@@ -223,7 +223,7 @@ async function loadRemoteImage(garmentId: string, rawUrl: string) {
 }
 
 export function getServerGarment(garmentId: string) {
-  const display = mockGarments.find((garment) => garment.id === garmentId)
+  const display = getGarmentById(garmentId)
   const providerConfiguration = garmentProviderConfiguration[garmentId]
   if (!display || !providerConfiguration) return null
 

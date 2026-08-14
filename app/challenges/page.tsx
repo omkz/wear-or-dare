@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { AppShell } from "@/components/app-shell"
 import { BoldnessIndicator } from "@/components/boldness-indicator"
-import { mockChallenges } from "@/lib/mock-data"
+import { challenges } from "@/lib/catalog/challenges"
 import type { Challenge } from "@/lib/types"
 import { Zap, Users, TrendingUp, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -18,11 +18,11 @@ export default function ChallengesPage() {
 
   const filtered =
     activeCategory === "All"
-      ? mockChallenges
-      : mockChallenges.filter((c) => c.category === activeCategory)
+      ? challenges
+      : challenges.filter((c) => c.category === activeCategory)
 
-  const featured = mockChallenges.find((c) => c.id === "ch-006")!
-  const trending = mockChallenges.filter((c) => c.participationCount > 20000).slice(0, 3)
+  const featured = challenges.find((c) => c.id === "ch-006")!
+  const trending = challenges.filter((c) => c.participationCount > 20000).slice(0, 3)
 
   const handleStart = (challenge: Challenge) => {
     router.push(`/generating?challenge=${challenge.id}`)

@@ -18,7 +18,8 @@ import type {
   GetTryOnHistoryResponse,
 } from "@/lib/api-contracts"
 import { authClient } from "@/lib/client/auth-client"
-import { mockChallenges, mockGarments } from "@/lib/mock-data"
+import { getChallengeById } from "@/lib/catalog/challenges"
+import { getGarmentById } from "@/lib/catalog/garments"
 import type { TryOn } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -216,10 +217,8 @@ export default function HistoryPage() {
         ) : (
           <div className="space-y-3 px-5">
             {tryOns.map((tryOn) => {
-              const challenge = mockChallenges.find(
-                (item) => item.id === tryOn.challengeId
-              )
-              const garment = mockGarments.find((item) => item.id === tryOn.garmentId)
+              const challenge = getChallengeById(tryOn.challengeId)
+              const garment = getGarmentById(tryOn.garmentId)
               const imageUrl = tryOn.resultImageUrl || tryOn.sourceImageUrl
               const status = statusDetails[tryOn.status]
               const isActionable = tryOn.status !== "failed"

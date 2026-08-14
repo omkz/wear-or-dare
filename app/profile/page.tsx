@@ -18,7 +18,7 @@ import { AccountControl } from "@/components/account-control"
 import { AppShell } from "@/components/app-shell"
 import type { ApiErrorResponse, GetProfileResponse, ProfileStats } from "@/lib/api-contracts"
 import { authClient } from "@/lib/client/auth-client"
-import { mockChallenges } from "@/lib/mock-data"
+import { getChallengeById } from "@/lib/catalog/challenges"
 import type { TryOn } from "@/lib/types"
 
 const menuItems = [
@@ -188,7 +188,7 @@ export default function ProfilePage() {
           ) : (
             <div className="flex gap-2">
               {recentWears.map((tryOn) => {
-                const challenge = mockChallenges.find((item) => item.id === tryOn.challengeId)
+                const challenge = getChallengeById(tryOn.challengeId)
                 return (
                   <Link
                     key={tryOn.id}

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useCallback } from "react"
-import { mockChallenges } from "@/lib/mock-data"
+import { challenges } from "@/lib/catalog/challenges"
 import type { Challenge } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -15,7 +15,7 @@ const SEGMENT_COLORS = [
   "#EC4899", "#10B981", "#EF4444", "#8B5CF6",
 ]
 
-const CHALLENGES = mockChallenges.slice(0, 8)
+const CHALLENGES = challenges.slice(0, 8)
 const TOTAL = CHALLENGES.length
 const SEGMENT_ANGLE = 360 / TOTAL
 

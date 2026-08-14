@@ -2,7 +2,8 @@
 
 import { useParams, useRouter } from "next/navigation"
 import Image from "next/image"
-import { mockTryOns, mockChallenges } from "@/lib/mock-data"
+import { mockTryOns } from "@/lib/mock-data"
+import { challenges } from "@/lib/catalog/challenges"
 import { ChevronLeft, Download, Share2, Zap, ExternalLink } from "lucide-react"
 
 export default function SharePage() {
@@ -11,7 +12,7 @@ export default function SharePage() {
   const id = params.id as string
 
   const tryOn = mockTryOns.find((t) => t.id === id) ?? mockTryOns[0]
-  const challenge = mockChallenges.find((c) => c.id === tryOn.challengeId) ?? mockChallenges[0]
+  const challenge = challenges.find((c) => c.id === tryOn.challengeId) ?? challenges[0]
 
   const handleShare = async () => {
     if (navigator.share) {

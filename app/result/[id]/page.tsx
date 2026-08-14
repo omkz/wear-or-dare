@@ -16,7 +16,8 @@ import type {
   UpdateTryOnDecisionRequest,
   UpdateTryOnDecisionResponse,
 } from "@/lib/api-contracts"
-import { mockChallenges, mockGarments } from "@/lib/mock-data"
+import { getChallengeById } from "@/lib/catalog/challenges"
+import { getGarmentById } from "@/lib/catalog/garments"
 import type { TryOn } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -149,8 +150,8 @@ export default function ResultPage() {
     )
   }
 
-  const challenge = mockChallenges.find((item) => item.id === tryOn.challengeId)
-  const garment = mockGarments.find((item) => item.id === tryOn.garmentId)
+  const challenge = getChallengeById(tryOn.challengeId)
+  const garment = getGarmentById(tryOn.garmentId)
   if (!challenge || !garment) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-5 text-center">

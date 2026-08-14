@@ -1,10 +1,7 @@
 import { randomUUID } from "node:crypto"
-import {
-  mockChallenges,
-  mockGarmentIdByChallenge,
-  mockGarments,
-  verdicts,
-} from "@/lib/mock-data"
+import { challenges } from "@/lib/catalog/challenges"
+import { garmentIdByChallenge, garments } from "@/lib/catalog/garments"
+import { verdicts } from "@/lib/mock-data"
 import type { TryOn, TryOnStatus } from "@/lib/types"
 
 const TOKEN_PREFIX = "tryon-v1."
@@ -92,9 +89,9 @@ function parsePayload(id: string, now: number): TryOnTokenPayload | null {
       n: value.n,
     }
 
-    const challengeExists = mockChallenges.some((challenge) => challenge.id === payload.c)
-    const garmentExists = mockGarments.some((garment) => garment.id === payload.g)
-    const expectedGarment = mockGarmentIdByChallenge[payload.c]
+    const challengeExists = challenges.some((challenge) => challenge.id === payload.c)
+    const garmentExists = garments.some((garment) => garment.id === payload.g)
+    const expectedGarment = garmentIdByChallenge[payload.c]
 
     if (
       payload.v !== 1 ||
@@ -150,11 +147,11 @@ function buildTryOn(id: string, payload: TryOnTokenPayload, now: number): MockTr
 }
 
 export function isValidChallengeId(challengeId: string) {
-  return mockChallenges.some((challenge) => challenge.id === challengeId)
+  return challenges.some((challenge) => challenge.id === challengeId)
 }
 
 export function getGarmentIdForChallenge(challengeId: string) {
-  return mockGarmentIdByChallenge[challengeId] ?? null
+  return garmentIdByChallenge[challengeId] ?? null
 }
 
 export function createMockTryOn(
@@ -164,7 +161,7 @@ export function createMockTryOn(
 ): MockTryOn | null {
   if (!isValidChallengeId(challengeId)) return null
 
-  const garmentId = mockGarmentIdByChallenge[challengeId]
+  const garmentId = garmentIdByChallenge[challengeId]
   if (!garmentId) return null
 
   // Deterministic: same requestId + challengeId always picks the same

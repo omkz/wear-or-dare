@@ -1,10 +1,10 @@
 import Link from "next/link"
-import { mockChallenges } from "@/lib/mock-data"
+import { challenges } from "@/lib/catalog/challenges"
 import { BoldnessIndicator } from "@/components/boldness-indicator"
 import { Users } from "lucide-react"
 
 export function RecentChallenges() {
-  const featured = mockChallenges.slice(0, 4)
+  const featured = challenges.slice(0, 4)
 
   return (
     <section className="px-5 py-6">

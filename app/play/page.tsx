@@ -12,10 +12,7 @@ import type {
   CreateTryOnResponse,
 } from "@/lib/api-contracts"
 import type { Challenge } from "@/lib/types"
-import {
-  mockGarmentIdByChallenge,
-  mockGarments,
-} from "@/lib/mock-data"
+import { getGarmentForChallenge } from "@/lib/catalog/garments"
 import { ArrowRight, History as HistoryIcon } from "lucide-react"
 import Image from "next/image"
 
@@ -31,9 +28,7 @@ export default function PlayPage() {
   const creationRequestIdRef = useRef<string | null>(null)
 
   const selectedGarment = selectedChallenge
-    ? mockGarments.find(
-        (garment) => garment.id === mockGarmentIdByChallenge[selectedChallenge.id]
-      ) ?? null
+    ? getGarmentForChallenge(selectedChallenge.id)
     : null
 
   useEffect(() => {
