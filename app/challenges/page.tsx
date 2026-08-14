@@ -57,7 +57,7 @@ export default function ChallengesPage() {
               <div className="flex items-center gap-1.5 mb-2">
                 <Sparkles className="h-3.5 w-3.5 text-white/80" aria-hidden="true" />
                 <span className="text-xs font-bold text-white/80 uppercase tracking-widest">
-                  Featured Today
+                  Featured Dare
                 </span>
               </div>
               <h2 className="text-2xl font-black text-white mb-1" style={{ fontFamily: "var(--font-display, sans-serif)" }}>

@@ -12,14 +12,14 @@ export function RecentChallenges() {
           className="text-2xl font-black tracking-tight"
           style={{ fontFamily: "var(--font-display, sans-serif)" }}
         >
-          Trending Dares
+          Featured Dares
         </h2>
       </div>
       <div className="grid grid-cols-2 gap-3">
         {featured.map((challenge) => (
           <Link
             key={challenge.id}
-            href="/photo"
+            href={`/photo?challenge=${encodeURIComponent(challenge.id)}`}
             className="group flex flex-col gap-2 rounded-2xl border border-border bg-card p-4 shadow-sm transition-all active:scale-95 hover:border-primary/40 hover:shadow-md"
           >
             <div className="flex items-start justify-between">
