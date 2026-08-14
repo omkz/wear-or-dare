@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useEffect, useRef, useState, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { AppShell } from "@/components/app-shell"
 import { BoldnessIndicator } from "@/components/boldness-indicator"
 import { usePhotoSession } from "@/components/providers/photo-session-provider"
@@ -13,16 +13,19 @@ import type {
   CreateTryOnResponse,
 } from "@/lib/api-contracts"
 import type { Challenge } from "@/lib/types"
-import { challenges } from "@/lib/catalog/challenges"
+import { challenges, getChallengeById } from "@/lib/catalog/challenges"
 import { getGarmentForChallenge } from "@/lib/catalog/garments"
 import { ArrowRight, History as HistoryIcon } from "lucide-react"
 import Image from "next/image"
 
-export default function PlayPage() {
+function PlayContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { data: session, isPending: isSessionPending } = authClient.useSession()
   const { file, previewUrl, uploadId, imageUrl, isInitialized } = usePhotoSession()
-  const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null)
+  const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(() =>
+    getChallengeById(searchParams.get("challenge") ?? "")
+  )
   const [wheelRun, setWheelRun] = useState(0)
   const [isCreating, setIsCreating] = useState(false)
   const [creationError, setCreationError] = useState<string | null>(null)
@@ -255,5 +258,13 @@ export default function PlayPage() {
         <div className="pb-6" />
       </div>
     </AppShell>
+  )
+}
+
+export default function PlayPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <PlayContent />
+    </Suspense>
   )
 }

@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useRef, useCallback, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useRef, useCallback, useEffect, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
 import {
   Camera,
@@ -15,6 +15,7 @@ import {
   User,
 } from "lucide-react"
 import { usePhotoSession } from "@/components/providers/photo-session-provider"
+import { getChallengeById } from "@/lib/catalog/challenges"
 import type {
   ApiErrorResponse,
   UploadPhotoResponse,
@@ -32,8 +33,10 @@ const tips = [
   { icon: XCircle, text: "Avoid crowded backgrounds", ok: false },
 ]
 
-export default function PhotoPage() {
+function PhotoPageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const selectedChallenge = getChallengeById(searchParams.get("challenge") ?? "")
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -243,7 +246,11 @@ export default function PhotoPage() {
         imageUrl: data.imageUrl,
         storagePath: data.storagePath,
       })
-      router.push("/play")
+      router.push(
+        selectedChallenge
+          ? `/play?challenge=${encodeURIComponent(selectedChallenge.id)}`
+          : "/play"
+      )
     } catch {
       setUploadError("We couldn’t upload your photo. Please try again.")
     } finally {
@@ -490,5 +497,13 @@ export default function PhotoPage() {
         <div className="pb-12" />
       </div>
     </div>
+  )
+}
+
+export default function PhotoPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <PhotoPageContent />
+    </Suspense>
   )
 }

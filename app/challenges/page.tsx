@@ -25,7 +25,7 @@ export default function ChallengesPage() {
   const moreDares = challenges.filter((c) => c.id !== featured.id).slice(0, 3)
 
   const handleStart = (challenge: Challenge) => {
-    router.push(`/generating?challenge=${challenge.id}`)
+    router.push(`/photo?challenge=${encodeURIComponent(challenge.id)}`)
   }
 
   return (
