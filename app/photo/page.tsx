@@ -367,7 +367,7 @@ export default function PhotoPage() {
                       Full-body photo required
                     </p>
                     <p className="text-center text-xs text-muted-foreground mb-6">
-                      Drag & drop or choose from options below
+                      Drag &amp; drop or choose a JPG/PNG below · up to 10MB
                     </p>
 
                     <div className="flex w-full flex-col gap-3">

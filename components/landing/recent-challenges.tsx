@@ -20,7 +20,7 @@ export function RecentChallenges() {
         {featured.map((challenge) => (
           <Link
             key={challenge.id}
-            href="/play"
+            href="/photo"
             className="group flex flex-col gap-2 rounded-2xl border border-border bg-card p-4 shadow-sm transition-all active:scale-95 hover:border-primary/40 hover:shadow-md"
           >
             <div className="flex items-start justify-between">

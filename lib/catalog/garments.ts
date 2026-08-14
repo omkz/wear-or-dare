@@ -7,7 +7,7 @@ export const garments: Garment[] = [
     brand: "Acne Studios",
     price: 650,
     category: "Outerwear",
-    imageUrl: "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400&h=600&fit=crop",
+    imageUrl: "/garments/g-001%20Oversized%20Blazer.png",
     tags: ["structured", "minimalist", "office"],
   },
   {
@@ -16,7 +16,7 @@ export const garments: Garment[] = [
     brand: "Off-White",
     price: 420,
     category: "Bottoms",
-    imageUrl: "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=400&h=600&fit=crop",
+    imageUrl: "/garments/g-002%20Cargo%20Trousers.png",
     tags: ["streetwear", "utility", "relaxed"],
   },
   {
@@ -25,7 +25,7 @@ export const garments: Garment[] = [
     brand: "Toteme",
     price: 380,
     category: "Dresses",
-    imageUrl: "https://images.unsplash.com/photo-1515372039744-b8f02a3ae446?w=400&h=600&fit=crop",
+    imageUrl: "/garments/g-003%20Slip%20Dress.png",
     tags: ["minimal", "silk", "elegant"],
   },
   {
@@ -34,7 +34,7 @@ export const garments: Garment[] = [
     brand: "Saint Laurent",
     price: 2800,
     category: "Outerwear",
-    imageUrl: "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=400&h=600&fit=crop",
+    imageUrl: "/garments/g-004%20Leather%20Jacket.png",
     tags: ["bold", "edgy", "iconic"],
   },
   {
@@ -43,7 +43,7 @@ export const garments: Garment[] = [
     brand: "ROTATE",
     price: 340,
     category: "Sets",
-    imageUrl: "https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=400&h=600&fit=crop",
+    imageUrl: "/garments/g-005%20Festival%20Set.png",
     tags: ["festival", "colorful", "fun"],
   },
   {
@@ -52,7 +52,7 @@ export const garments: Garment[] = [
     brand: "The Row",
     price: 890,
     category: "Bottoms",
-    imageUrl: "https://images.unsplash.com/photo-1583496661160-fb5218ees33c?w=400&h=600&fit=crop",
+    imageUrl: "/garments/g-006%20Midi%20Skirt.png",
     tags: ["quiet luxury", "structured", "elegant"],
   },
 ]

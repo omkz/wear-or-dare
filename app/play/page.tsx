@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { AppShell } from "@/components/app-shell"
+import { BoldnessIndicator } from "@/components/boldness-indicator"
 import { usePhotoSession } from "@/components/providers/photo-session-provider"
 import { RouletteWheel } from "@/components/roulette-wheel"
 import { authClient } from "@/lib/client/auth-client"
@@ -12,6 +13,7 @@ import type {
   CreateTryOnResponse,
 } from "@/lib/api-contracts"
 import type { Challenge } from "@/lib/types"
+import { challenges } from "@/lib/catalog/challenges"
 import { getGarmentForChallenge } from "@/lib/catalog/garments"
 import { ArrowRight, History as HistoryIcon } from "lucide-react"
 import Image from "next/image"
@@ -134,15 +136,25 @@ export default function PlayPage() {
           </button>
         </header>
 
+        {/* Progress */}
+        <div className="px-5 mb-6">
+          <span className="sr-only">Step 2 of 3</span>
+          <div className="flex gap-1.5" aria-hidden="true">
+            <div className="h-1.5 flex-1 rounded-full bg-primary" />
+            <div className="h-1.5 flex-1 rounded-full bg-primary" />
+            <div className="h-1.5 flex-1 rounded-full bg-border" />
+          </div>
+        </div>
+
         {/* Challenge categories strip */}
         <div className="px-5 mb-6">
           <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-            {["First Date", "Quiet Luxury", "90s Streetwear", "Festival Mode", "Cyberpunk", "Main Character"].map((cat) => (
+            {challenges.slice(0, 6).map((challenge) => (
               <span
-                key={cat}
+                key={challenge.id}
                 className="shrink-0 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground"
               >
-                {cat}
+                {challenge.emoji} {challenge.title}
               </span>
             ))}
           </div>
@@ -161,6 +173,26 @@ export default function PlayPage() {
         <div className="px-5 mt-6">
           {selectedChallenge && selectedGarment ? (
             <div className="pop-in overflow-hidden rounded-3xl border border-border bg-card shadow-lg">
+              {/* Challenge reveal */}
+              <div className="flex items-start gap-3 border-b border-border bg-secondary/40 px-4 py-3">
+                <span className="text-2xl leading-none" aria-hidden="true">
+                  {selectedChallenge.emoji}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-primary">
+                    Your Dare
+                  </p>
+                  <h2 className="truncate text-sm font-black text-foreground">
+                    {selectedChallenge.title}
+                  </h2>
+                  <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-muted-foreground">
+                    {selectedChallenge.description}
+                  </p>
+                </div>
+                <BoldnessIndicator level={selectedChallenge.boldness} className="mt-1 shrink-0" />
+              </div>
+
+              {/* Garment reveal */}
               <div className="flex gap-4 p-4">
                 <div className="relative h-32 w-24 shrink-0 overflow-hidden rounded-2xl bg-secondary">
                   <Image
@@ -172,12 +204,12 @@ export default function PlayPage() {
                   />
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col justify-center">
-                  <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-primary">
-                    {selectedChallenge.title}
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Featured Piece
                   </p>
-                  <h2 className="text-xl font-black leading-tight text-foreground">
+                  <h3 className="text-xl font-black leading-tight text-foreground">
                     {selectedGarment.name}
-                  </h2>
+                  </h3>
                   <p className="mt-1 text-sm text-muted-foreground">
                     {selectedGarment.brand} · {selectedGarment.category}
                   </p>
@@ -197,7 +229,7 @@ export default function PlayPage() {
                   disabled={isCreating || isSessionPending}
                   className="flex h-12 flex-[1.4] items-center justify-center gap-2 rounded-2xl bg-primary text-sm font-bold text-primary-foreground shadow-lg transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isCreating ? "Creating…" : "Try This Look"}
+                  {isCreating ? "Generating…" : "Generate This Look"}
                   {!isCreating && <ArrowRight className="h-4 w-4" aria-hidden="true" />}
                 </button>
               </div>

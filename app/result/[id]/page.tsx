@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
+import Link from "next/link"
 import Image from "next/image"
 import {
   RotateCcw,
@@ -9,6 +10,7 @@ import {
   Zap,
   ChevronLeft,
   History as HistoryIcon,
+  Share2,
 } from "lucide-react"
 import type {
   ApiErrorResponse,
@@ -229,7 +231,7 @@ export default function ResultPage() {
           {/* Verdict */}
           <div className="mb-4">
             <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Try-on {tryOn.status}
+              Your Verdict
             </p>
             <h1
               className="text-3xl font-black tracking-tight text-balance leading-none mb-1"
@@ -298,6 +300,16 @@ export default function ResultPage() {
               {decisionError}
             </p>
           )}
+
+          {/* Share */}
+          <Link
+            href={`/result/${encodeURIComponent(tryOn.id)}/share`}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border-2 border-border bg-card text-sm font-semibold text-foreground transition-all active:scale-95"
+          >
+            <Share2 className="h-4 w-4 text-primary" aria-hidden="true" />
+            Share This Look
+          </Link>
+
           <div className="mb-8" />
         </div>
       </div>

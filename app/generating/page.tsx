@@ -203,6 +203,16 @@ function GeneratingContent() {
 
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-background px-5">
+      {/* Progress */}
+      <div className="absolute top-12 left-5 right-16 flex h-10 items-center">
+        <span className="sr-only">Step 3 of 3</span>
+        <div className="flex w-full gap-1.5" aria-hidden="true">
+          <div className="h-1.5 flex-1 rounded-full bg-primary" />
+          <div className="h-1.5 flex-1 rounded-full bg-primary" />
+          <div className="h-1.5 flex-1 rounded-full bg-primary" />
+        </div>
+      </div>
+
       {/* Cancel */}
       <button
         onClick={handleCancel}
@@ -275,7 +285,7 @@ function GeneratingContent() {
         </div>
 
         <p className="text-sm text-muted-foreground">
-          {Math.round(progress)}% complete · AI is styling your look
+          AI is styling your look…
         </p>
       </div>
     </div>
