@@ -170,15 +170,13 @@ Wear It / Dare Again
 ## Screenshots
 
 ### Spin a Challenge
-<!-- Add screenshot -->
+![Spin a Challenge](docs/screenshots/spin-challenge.png)
 
-### Virtual Try-On
-<!-- Add screenshot -->
+### Reveal the Look
+![Reveal the Look](docs/screenshots/garment-reveal.png)
 
-### Wear It or Dare Again
-<!-- Add screenshot -->
-
----
+### Virtual Try-On Result
+![Virtual Try-On Result](docs/screenshots/final-result.png)
 
 ## Tech Stack
 
